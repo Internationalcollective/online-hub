@@ -53,7 +53,7 @@ Passcodes aren't case-sensitive. Someone who works on both types in both passcod
 
 ## Look
 
-The hub uses one neutral International Collective style for every brand, with the brand name shown on each call sheet. To add the IC logo, save it as 'assets/logo.svg' and it appears above the heading automatically.
+The hub uses a neutral International Collective style, with the brand name shown on each call sheet. onezerofive call sheets use the onezerofive brand guide: slate and light greys, Avenir set lowercase with wide tracking, and TT Norms for body text. Avenir shows on Apple devices, and Nunito Sans / Figtree stand in elsewhere. To style another brand, add a '.b-<brand-id>' block in index.html. To add the IC logo, save it as 'assets/logo.svg' and it appears above the heading automatically.
 
 ## Good to know
 

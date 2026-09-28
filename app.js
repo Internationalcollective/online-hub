@@ -120,9 +120,9 @@ function renderList(){
   if(!S.ready){ box.append(h("div",{class:"empty"}, S.err || "Loading callsheets…")); return; }
   const t = todayISO(), all = filtered();
   if(!all.length){ box.append(h("div",{class:"empty"}, S.q ? "No callsheets match that search." : (S.admin ? "No callsheets yet. Press New to make the first one." : "No callsheets have been issued yet."))); return; }
-  const grp = (label, arr, sub) => {
+  const grp = (label, arr, sub, bid) => {
     if(!arr.length) return;
-    const g = h("div",{class:"grp"}, h("h2",null,label, sub ? h("span",{class:"grp-sub"}," · "+sub) : null));
+    const g = h("div",{class:"grp"+(bid?" b-"+bid:"")}, h("h2",null,label, sub ? h("span",{class:"grp-sub"}," · "+sub) : null));
     for(const s of arr){
       const d = dObj(s.date), people=[...(s.crew||[]),...(s.cast||[])], cm=S.confirms.get(s.id)||new Map();
       const n = people.filter(p=>cm.has(p.id)).length;
@@ -141,7 +141,7 @@ function renderList(){
     const up = mine.filter(s=>(s.date||"9999")>=t).sort((a,c)=>(a.date||"").localeCompare(c.date||""));
     const past = mine.filter(s=>(s.date||"9999")<t).sort((a,c)=>(c.date||"").localeCompare(a.date||""));
     const name = brandName(b);
-    grp(name, up, "Upcoming"); grp(name, past, "Past");
+    grp(name, up, "Upcoming", b); grp(name, past, "Past", b);
   }
   const who = $("who"); who.replaceChildren();
   if(S.admin) who.append(h("span",null,"Signed in as "+S.email), h("button",{class:"linkbtn",onclick:signOut},"Sign out"));
@@ -198,7 +198,7 @@ function renderSheet(){
   const raw = S.sheets.get(S.sel);
   if(!raw){ main.append(h("div",{class:"placeholder"}, S.sheets.size ? "Pick a call sheet from the list." : "No call sheets yet.")); return; }
   const s = {id:S.sel, ...raw}, loc = s.location||{};
-  const sheet = h("article",{class:"sheet"});
+  const sheet = h("article",{class:"sheet"+(S.brandOf.get(s.id)?" b-"+S.brandOf.get(s.id):"")});
   sheet.append(h("div",{class:"sheet-top"},
     h("div",null,
       h("div",{class:"kicker"}, h("span",{class:"cs"}, brandName(S.brandOf.get(s.id))), h("span",null,"Call sheet"), s.dayOf? h("span",null,s.dayOf):null, statusChip(s.status), h("span",{class:"chip"},"v"+(s.version||1))),
@@ -286,7 +286,7 @@ function listEditor(d, key){
     d[key].length ? rows : h("div",{class:"empty"},"Nothing here yet."));
 }
 function renderEditor(){
-  const E=S.editing, d=E.d, wrap=h("article",{class:"sheet ed"});
+  const E=S.editing, d=E.d, wrap=h("article",{class:"sheet ed"+(E.brand?" b-"+E.brand:"")});
   const cancel = ()=>{ S.editing=null; render(); };
   wrap.append(h("div",{class:"sheet-top"}, h("div",null, h("div",{class:"kicker"},h("span",{class:"cs"}, E.id?"Editing call sheet":"New call sheet")), h("h2",null, d.project||"Untitled"),
     h("p",{class:"sub"}, E.id ? "Saving issues a new version. Anyone who confirmed an earlier one is asked to reconfirm." : "Fill in what you know. Blanks show as TBC."))));
@@ -294,7 +294,7 @@ function renderEditor(){
   wrap.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"The day")),
     h("div",{class:"fgrid"},
       h("div",{class:"f"}, h("label",{for:"f-brand"},"Brand (who can see it)"),
-        h("select",{id:"f-brand",oninput:e=>{E.brand=e.target.value;}}, ...S.brands.map(b=>{ const o=h("option",{value:b.id},b.name); if(E.brand===b.id) o.selected=true; return o; }))),
+        h("select",{id:"f-brand",oninput:e=>{E.brand=e.target.value; renderSheet();}}, ...S.brands.map(b=>{ const o=h("option",{value:b.id},b.name); if(E.brand===b.id) o.selected=true; return o; }))),
       field(d,"project","Project",{ph:"e.g. onezerofive"}), field(d,"client","Client"), field(d,"title","Title",{ph:"e.g. Campaign"}),
       field(d,"date","Date",{type:"date"}), field(d,"dayOf","Day",{ph:"Day 1 of 2"}),
       field(d,"status","Status",{options:[["draft","Draft"],["issued","Issued"],["wrapped","Wrapped"]]}),
