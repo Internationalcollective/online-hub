@@ -1,0 +1,3 @@
+# Private: holds the passcode and call sheet data. Never push these to the public repo.
+supabase/
+.DS_Store
