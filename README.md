@@ -31,22 +31,29 @@ In Supabase, open **Authentication → URL Configuration**:
 
 Now open the site and click **Sign in to edit**. Enter your production email and click the link that arrives. You'll see **New**, **Edit**, **Duplicate** and **Delete**.
 
+## Brands and passcodes
+
+Each brand has its own passcode, so crew on one shoot can't see another brand's call sheets:
+
+- onezerofive: 'A105'
+- Dancers Inc.: 'Dinc.'
+
+Passcodes aren't case-sensitive. Someone who works on both types in both passcodes ("Add another shoot's passcode"), and the hub remembers them on that phone. Production (signed in) sees every brand and picks the brand when creating a call sheet.
+
+- **Change a brand's passcode** (SQL Editor): 'update brands set passcode_hash = extensions.crypt(lower('new-code'), extensions.gen_salt('bf')) where id = 'dancers-inc';'
+- **Add a brand:** 'insert into brands (id, name, passcode_hash, sort) values ('new-brand', 'New Brand', extensions.crypt(lower('code'), extensions.gen_salt('bf')), 3);'
+- The database setup is in 'supabase/schema.sql' then 'supabase/brands.sql' (run after it).
+
 ## Day to day
 
 - **Send crew and cast:** the link plus the passcode, e.g. in the WhatsApp group.
-- **Change the passcode:** in the SQL Editor, run
-  'update settings set passcode_hash = extensions.crypt('new-passcode', extensions.gen_salt('bf'));'
-  Everyone will need the new one.
 - **Add another editor:** 'insert into admins (email) values ('name@international-collective.com');'
 - **Re-issue:** every save raises the version. Anyone who confirmed an older version sees **Reconfirm**.
 - **Pages update on their own.** They refresh every minute and whenever someone returns to the tab.
 
-## Brand assets
+## Look
 
-- **Wordmark:** save it as 'assets/wordmark.svg'. It appears above the heading automatically.
-- **Fonts:** add the licensed web fonts to 'fonts/' with these exact names:
-  'avenir-light.woff2', 'avenir-roman.woff2', 'tt-norms-regular.woff2', 'tt-norms-medium.woff2'.
-  Until then, Apple devices use their built-in Avenir and other devices use Nunito Sans / Figtree.
+The hub uses one neutral International Collective style for every brand, with the brand name shown on each call sheet. To add the IC logo, save it as 'assets/logo.svg' and it appears above the heading automatically.
 
 ## Good to know
 

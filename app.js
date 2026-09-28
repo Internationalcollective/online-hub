@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 const CFG = window.HUB_CONFIG || {};
-const S = { sheets:new Map(), confirms:new Map(), sel:null, editing:null, q:"", admin:false, email:"", code:"", ready:false, delAsk:false, err:"" };
+const S = { sheets:new Map(), confirms:new Map(), sel:null, editing:null, q:"", admin:false, email:"", codes:[], brands:[], brandOf:new Map(), ready:false, delAsk:false, err:"" };
 const $ = id => document.getElementById(id);
 const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v); }catch(e){} } };
 
@@ -38,8 +38,12 @@ const configured = CFG.supabaseUrl && !/YOUR-PROJECT/.test(CFG.supabaseUrl) && C
 const sb = configured && window.supabase ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
 
 async function loadAll(){
-  const { data, error } = await sb.rpc("hub_read", { p_code: S.code || "" });
+  const { data, error } = await sb.rpc("hub_read", { p_codes: S.codes });
   if (error) throw error;
+  const per = data.codes || [];
+  if (per.some(Boolean)) { S.codes = S.codes.filter((c,i)=>per[i]); saveCodes(); }
+  S.brands = data.brands || [];
+  S.brandOf = new Map((data.callsheets||[]).map(r=>[r.id, r.brand||""]));
   S.sheets = new Map((data.callsheets||[]).map(r=>[r.id, r.data]));
   const m = new Map();
   for (const c of (data.confirms||[])){ if(!m.has(c.sheet)) m.set(c.sheet,new Map()); m.get(c.sheet).set(c.person,c); }
@@ -48,7 +52,7 @@ async function loadAll(){
 async function refresh(){
   try{ await loadAll(); S.err=""; }
   catch(e){
-    if (isBadCode(e)){ store.set("hub-code",null); S.code=""; showGate("That passcode didn't work. Check it and try again."); return; }
+    if (isBadCode(e)){ S.codes=[]; saveCodes(); showGate("That passcode no longer works. Ask production for the current one."); return; }
     S.err = "Couldn't reach the call sheets. Check your connection and reload.";
   }
   if(!S.sel){
@@ -61,21 +65,40 @@ async function refresh(){
   }
   if(!S.editing) render(); else renderList();
 }
+function saveCodes(){ store.set("hub-codes", S.codes.length ? JSON.stringify(S.codes) : null); }
+function loadCodes(){
+  let c=[]; try{ c = JSON.parse(store.get("hub-codes")||"[]"); }catch(e){}
+  const old = store.get("hub-code"); if(old){ c.push(old); store.set("hub-code",null); }
+  return [...new Set(c.filter(Boolean))];
+}
+const brandName = id => (S.brands.find(b=>b.id===id)||{}).name || (id ? id : "No brand");
 const isBadCode = e => e && (e.code==="28P01" || /bad_passcode/.test(e.message||""));
 
 /* ---------- gate ---------- */
-function showGate(msg){
+function showGate(msg, adding){
   $("app").hidden = true; $("gate").hidden = false;
+  $("gateIntro").textContent = adding ? "Enter the passcode for another shoot. You'll keep access to the ones you already have." : "Call sheets for every shoot day. Enter the passcode production sent you with the link.";
+  $("gateBack").hidden = !(adding && (S.codes.length || S.admin));
   $("codeMsg").textContent = msg || ""; $("codeMsg").className = "msg" + (msg ? " err" : "");
   if(!configured){ $("codeMsg").textContent = "This hub isn't connected to its database yet. Fill in config.js."; $("codeMsg").className="msg err"; }
 }
 function showApp(){ $("gate").hidden = true; $("app").hidden = false; }
 $("codeForm").addEventListener("submit", async e=>{
   e.preventDefault(); if(!sb) return;
-  S.code = $("code").value.trim(); $("codeMsg").textContent = "Checking…"; $("codeMsg").className="msg";
-  try{ await loadAll(); store.set("hub-code", S.code); showApp(); S.sel=null; await refresh(); }
-  catch(err){ $("codeMsg").textContent = isBadCode(err) ? "That passcode didn't work. Check it and try again." : "Couldn't reach the call sheets. Try again."; $("codeMsg").className="msg err"; }
+  const code = $("code").value.trim(); if(!code) return;
+  $("codeMsg").textContent = "Checking…"; $("codeMsg").className="msg";
+  const before = S.codes.slice();
+  S.codes = [...new Set([...S.codes, code])];
+  try{
+    const { data, error } = await sb.rpc("hub_read", { p_codes: [code] });
+    if (error) throw error;
+    saveCodes(); $("code").value=""; showApp(); S.sel=null; await refresh();
+  } catch(err){
+    S.codes = before;
+    $("codeMsg").textContent = isBadCode(err) ? "That passcode didn't work. Check it and try again." : "Couldn't reach the call sheets. Try again."; $("codeMsg").className="msg err";
+  }
 });
+$("gateBack").addEventListener("click", ()=>{ showApp(); render(); });
 $("showSignin").addEventListener("click", ()=>{ $("signinForm").hidden = !$("signinForm").hidden; if(!$("signinForm").hidden) $("email").focus(); });
 $("signinForm").addEventListener("submit", async e=>{
   e.preventDefault(); if(!sb) return;
@@ -96,12 +119,10 @@ function renderList(){
   const box = $("list"); box.replaceChildren();
   if(!S.ready){ box.append(h("div",{class:"empty"}, S.err || "Loading callsheets…")); return; }
   const t = todayISO(), all = filtered();
-  const up = all.filter(s=>(s.date||"9999")>=t).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-  const past = all.filter(s=>(s.date||"9999")<t).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   if(!all.length){ box.append(h("div",{class:"empty"}, S.q ? "No callsheets match that search." : (S.admin ? "No callsheets yet. Press New to make the first one." : "No callsheets have been issued yet."))); return; }
-  const grp = (label, arr) => {
+  const grp = (label, arr, sub) => {
     if(!arr.length) return;
-    const g = h("div",{class:"grp"}, h("h2",null,label));
+    const g = h("div",{class:"grp"}, h("h2",null,label, sub ? h("span",{class:"grp-sub"}," · "+sub) : null));
     for(const s of arr){
       const d = dObj(s.date), people=[...(s.crew||[]),...(s.cast||[])], cm=S.confirms.get(s.id)||new Map();
       const n = people.filter(p=>cm.has(p.id)).length;
@@ -114,12 +135,20 @@ function renderList(){
     }
     box.append(g);
   };
-  grp("Upcoming", up); grp("Past", past);
+  const ids = [...new Set([...S.brands.map(b=>b.id), ...all.map(s=>S.brandOf.get(s.id)||"")])];
+  for(const b of ids){
+    const mine = all.filter(s=>(S.brandOf.get(s.id)||"")===b);
+    const up = mine.filter(s=>(s.date||"9999")>=t).sort((a,c)=>(a.date||"").localeCompare(c.date||""));
+    const past = mine.filter(s=>(s.date||"9999")<t).sort((a,c)=>(c.date||"").localeCompare(a.date||""));
+    const name = brandName(b);
+    grp(name, up, "Upcoming"); grp(name, past, "Past");
+  }
   const who = $("who"); who.replaceChildren();
   if(S.admin) who.append(h("span",null,"Signed in as "+S.email), h("button",{class:"linkbtn",onclick:signOut},"Sign out"));
-  else who.append(h("button",{class:"linkbtn",onclick:()=>{ store.set("hub-code",null); S.code=""; showGate(); }},"Lock this device"));
+  who.append(h("button",{class:"linkbtn",onclick:()=>showGate("", true)},"Add another shoot's passcode"));
+  if(!S.admin) who.append(h("button",{class:"linkbtn",onclick:()=>{ S.codes=[]; saveCodes(); showGate(); }},"Lock this device"));
 }
-async function signOut(){ await sb.auth.signOut(); S.admin=false; S.email=""; if(S.code) refresh(); else showGate(); }
+async function signOut(){ await sb.auth.signOut(); S.admin=false; S.email=""; S.sel=null; if(S.codes.length) refresh(); else showGate(); }
 
 /* ---------- sheet view ---------- */
 function select(id){ S.sel=id; S.editing=null; S.delAsk=false; try{ history.replaceState(null,"","#"+id); }catch(e){} render(); window.scrollTo({top:0}); }
@@ -138,7 +167,7 @@ function confirmCell(sheet, p){
   return wrap;
 }
 async function doConfirm(sheet,p){
-  const { error } = await sb.rpc("hub_confirm", { p_code:S.code||"", p_sheet:sheet.id, p_person:p.id });
+  const { error } = await sb.rpc("hub_confirm", { p_codes:S.codes, p_sheet:sheet.id, p_person:p.id });
   if(error){ flash(/no_person|no_sheet/.test(error.message||"") ? "This call sheet changed. Reload and try again." : "Couldn't save the confirmation. Try again."); return; }
   await refresh();
 }
@@ -165,14 +194,14 @@ function peopleTable(sheet, rows, cols, label){
 function renderSheet(){
   const main = $("main"); main.replaceChildren();
   if(S.editing){ main.append(renderEditor()); return; }
-  if(!S.ready){ main.append(h("div",{class:"placeholder"}, S.err || "loading…")); return; }
+  if(!S.ready){ main.append(h("div",{class:"placeholder"}, S.err || "Loading…")); return; }
   const raw = S.sheets.get(S.sel);
-  if(!raw){ main.append(h("div",{class:"placeholder"}, S.sheets.size ? "pick a call sheet from the list." : "no call sheets yet.")); return; }
+  if(!raw){ main.append(h("div",{class:"placeholder"}, S.sheets.size ? "Pick a call sheet from the list." : "No call sheets yet.")); return; }
   const s = {id:S.sel, ...raw}, loc = s.location||{};
   const sheet = h("article",{class:"sheet"});
   sheet.append(h("div",{class:"sheet-top"},
     h("div",null,
-      h("div",{class:"kicker"}, h("span",{class:"cs"},"Call sheet"), s.dayOf? h("span",null,s.dayOf):null, statusChip(s.status), h("span",{class:"chip"},"v"+(s.version||1))),
+      h("div",{class:"kicker"}, h("span",{class:"cs"}, brandName(S.brandOf.get(s.id))), h("span",null,"Call sheet"), s.dayOf? h("span",null,s.dayOf):null, statusChip(s.status), h("span",{class:"chip"},"v"+(s.version||1))),
       h("h2",null, s.project||"Untitled"),
       h("p",{class:"sub"}, [s.title, s.client && s.client!==s.project ? "for "+s.client : null].filter(Boolean).join(" · ")),
       h("p",{class:"when"}, fmtLong(s.date)+" · "+rel(s.date))),
@@ -228,7 +257,7 @@ function startEdit(id, dup){
   for(const k of Object.keys(LISTS)) d[k]=d[k]||[];
   d.notes=d.notes||[];
   if(dup){ d.status="draft"; d.title=(d.title||"")+" (copy)"; for(const p of [...d.crew,...d.cast]) p.id="p"+rid(); }
-  S.editing = {id: dup?null:id, d, err:""};
+  S.editing = {id: dup?null:id, d, err:"", brand: (id && S.brandOf.get(id)) || (S.brands[0]||{}).id || ""};
   $("app").classList.add("has-sel"); renderSheet(); window.scrollTo({top:0});
 }
 function field(d, path, label, opts={}){
@@ -259,11 +288,13 @@ function listEditor(d, key){
 function renderEditor(){
   const E=S.editing, d=E.d, wrap=h("article",{class:"sheet ed"});
   const cancel = ()=>{ S.editing=null; render(); };
-  wrap.append(h("div",{class:"sheet-top"}, h("div",null, h("div",{class:"kicker"},h("span",{class:"cs"}, E.id?"Editing call sheet":"New call sheet")), h("h2",null, d.project||"untitled"),
-    h("p",{class:"sub"}, E.id ? "saving issues a new version. anyone who confirmed an earlier one is asked to reconfirm." : "fill in what you know. blanks show as TBC."))));
+  wrap.append(h("div",{class:"sheet-top"}, h("div",null, h("div",{class:"kicker"},h("span",{class:"cs"}, E.id?"Editing call sheet":"New call sheet")), h("h2",null, d.project||"Untitled"),
+    h("p",{class:"sub"}, E.id ? "Saving issues a new version. Anyone who confirmed an earlier one is asked to reconfirm." : "Fill in what you know. Blanks show as TBC."))));
   wrap.append(h("div",{class:"actions"}, h("button",{class:"btn primary",onclick:save},"Save call sheet"), h("button",{class:"btn",onclick:cancel},"Cancel"), h("span",{class:"sp"}), E.err? h("span",{class:"err"},E.err):null));
   wrap.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"The day")),
     h("div",{class:"fgrid"},
+      h("div",{class:"f"}, h("label",{for:"f-brand"},"Brand (who can see it)"),
+        h("select",{id:"f-brand",oninput:e=>{E.brand=e.target.value;}}, ...S.brands.map(b=>{ const o=h("option",{value:b.id},b.name); if(E.brand===b.id) o.selected=true; return o; }))),
       field(d,"project","Project",{ph:"e.g. onezerofive"}), field(d,"client","Client"), field(d,"title","Title",{ph:"e.g. Campaign"}),
       field(d,"date","Date",{type:"date"}), field(d,"dayOf","Day",{ph:"Day 1 of 2"}),
       field(d,"status","Status",{options:[["draft","Draft"],["issued","Issued"],["wrapped","Wrapped"]]}),
@@ -280,11 +311,12 @@ function renderEditor(){
 }
 async function save(){
   const E=S.editing, d=E.d;
+  if(!E.brand){ E.err="Choose which brand this call sheet belongs to."; renderSheet(); return; }
   if(!d.project.trim()){ E.err="Add a project name first."; renderSheet(); return; }
   const prev = E.id ? S.sheets.get(E.id) : null;
   const id = E.id || ((d.date||"undated")+"-"+slug(d.project)+"-"+rid());
   const body = {...d, version: prev ? (prev.version||1)+1 : 1, updated:new Date().toISOString()};
-  const { error } = await sb.from("callsheets").upsert({ id, data: body, updated_at: body.updated });
+  const { error } = await sb.from("callsheets").upsert({ id, brand: E.brand, data: body, updated_at: body.updated });
   if(error){ E.err = "Couldn't save: " + (error.message||"try again"); renderSheet(); return; }
   S.editing=null; S.sel=id; try{history.replaceState(null,"","#"+id);}catch(e){}
   await refresh();
@@ -308,8 +340,8 @@ async function boot(){
     if(location.hash.includes("access_token")) try{ history.replaceState(null,"",location.pathname); }catch(e){}
     if(!S.admin){ await sb.auth.signOut(); $("signinMsg").textContent="That email isn't on the production list."; $("signinMsg").className="msg err"; $("signinForm").hidden=false; }
   }
-  S.code = store.get("hub-code") || "";
-  if(!S.admin && !S.code){ showGate(); return; }
+  S.codes = loadCodes(); saveCodes();
+  if(!S.admin && !S.codes.length){ showGate(); return; }
   showApp(); render(); await refresh();
   setInterval(()=>{ if(!document.hidden && !S.editing && !$("app").hidden) refresh(); }, 60000);
   document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && !S.editing && !$("app").hidden) refresh(); });
