@@ -25,6 +25,91 @@ function rel(iso){
   if(n===0) return "Today"; if(n===1) return "Tomorrow"; if(n>1) return "In "+n+" days";
   if(n===-1) return "Yesterday"; return Math.abs(n)+" days ago";
 }
+const mapsUrl = loc => { const q=[loc&&loc.name, loc&&loc.address].filter(Boolean).join(", "); return q ? "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q) : ""; };
+// Descriptions: bullets only when the text is a list (one item per line).
+function descNode(text, cls){
+  const items=String(text).split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  return items.length>1 ? h("ul",{class:"list desc-list "+cls}, ...items.map(x=>h("li",null,x))) : h("span",{class:cls}, items[0]||"");
+}
+function factNode(k, v, loc){
+  const url = loc && loc!=="list" ? mapsUrl(loc) : "";
+  if(loc==="list" && !isTBC(v)){ const items=String(v).split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    if(items.length<2) return h("div",{class:"fact"}, h("span",{class:"k"},k), h("span",{class:"v"}, items[0]||""));
+    return h("div",{class:"fact"}, h("span",{class:"k"},k), h("ul",{class:"list fact-list"}, ...items.map(x=>h("li",null,x)))); }
+  if(!url) return h("div",{class:"fact"}, h("span",{class:"k"},k), h("span",{class:"v"}, isTBC(v)? tbcNode(v) : v));
+  return h("a",{class:"fact fact-link",href:url,target:"_blank",rel:"noopener","aria-label":"Open "+(loc.name||"the location")+" in maps"},
+    h("span",{class:"k"},k), h("span",{class:"v"}, v), h("span",{class:"maplink"},"open in maps ↗"));
+}
+// Countdown to the shoot (crew call on the shoot date) as a simple flip clock: days : hours : minutes : seconds.
+function callTarget(date, time){
+  if(!date) return null;
+  const m = /^\s*(\d{1,2})[:.](\d{2})/.exec(time||"");
+  const d = new Date(date+"T"+(m ? m[1].padStart(2,"0")+":"+m[2] : "00:00")+":00");
+  return isNaN(d) ? null : d;
+}
+function countdownParts(target){
+  let ms = target - Date.now();
+  if(ms <= 0) return null;
+  const secs = Math.floor(ms/1000), d = Math.floor(secs/86400), hh = Math.floor((secs%86400)/3600), mm = Math.floor((secs%3600)/60), ss = secs%60;
+  return [[String(d).padStart(2,"0"),"days"],[String(hh).padStart(2,"0"),"hrs"],[String(mm).padStart(2,"0"),"mins"],[String(ss).padStart(2,"0"),"secs"]];
+}
+function countdownClock(date, time){
+  const target = callTarget(date, time);
+  const box = h("div",{class:"countdown","data-target": target ? target.toISOString() : ""});
+  paintCountdown(box, true);
+  return box;
+}
+// One split-flap tile: static top/bottom halves plus two flaps that fold over when the digit changes.
+function flipTile(ch, i){
+  const half = (cls, v) => h("span",{class:cls}, h("span",{class:"f-in"}, v));
+  const tile = h("span",{class:"flip",style:"--i:"+i},
+    half("f-top", ch), half("f-bot", ch), half("f-flap-top", ch), half("f-flap-bot", ch));
+  tile.dataset.v = ch;
+  return tile;
+}
+const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function setTile(tile, next, delay){
+  const prev = tile.dataset.v;
+  if(prev === next) return;
+  tile.dataset.v = next;
+  const q = sel => tile.querySelector(sel+" .f-in");
+  if(reduceMotion()){ ["f-top","f-bot","f-flap-top","f-flap-bot"].forEach(c=>q("."+c).textContent=next); return; }
+  q(".f-top").textContent = next;        // revealed behind the falling top flap
+  q(".f-flap-top").textContent = prev;   // old top half folds down
+  q(".f-flap-bot").textContent = next;   // new bottom half folds into place
+  q(".f-bot").textContent = prev;        // old bottom half stays until the flap covers it
+  tile.style.setProperty("--d", (delay||0)+"ms");
+  tile.classList.remove("flipping"); void tile.offsetWidth; tile.classList.add("flipping");
+  clearTimeout(tile._t);
+  tile._t = setTimeout(()=>{ q(".f-bot").textContent = next; tile.classList.remove("flipping"); }, 640 + (delay||0));
+}
+function paintCountdown(box, first){
+  const t = box.dataset.target ? new Date(box.dataset.target) : null;
+  const parts = t ? countdownParts(t) : null;
+  if(!parts){ box.replaceChildren(h("span",{class:"k"}, t ? "shoot day" : "date tbc")); box.setAttribute("aria-label", t ? "the shoot has started" : "date to be confirmed"); return; }
+  box.setAttribute("role","timer");
+  box.setAttribute("aria-label", parts.map(([v,l])=>Number(v)+" "+l).join(", ")+" until the shoot");
+  const flat = parts.map(p=>p[0]).join("");
+  let tiles = box.querySelectorAll(".flip");
+  if(first || tiles.length !== flat.length){
+    const clock = h("div",{class:"flipclock","aria-hidden":"true"});
+    let i=0;
+    parts.forEach(([v,l],g)=>{
+      if(g) clock.append(h("span",{class:"flip-colon"},":"));
+      const digits = h("span",{class:"flip-digits"});
+      [...v].forEach(()=>digits.append(flipTile("0", i++)));
+      clock.append(h("span",{class:"flip-group"}, digits, h("span",{class:"flip-label"},l)));
+    });
+    box.replaceChildren(h("span",{class:"k"},"countdown to shoot"), clock);
+    tiles = box.querySelectorAll(".flip");
+    // Opening flourish: every tile flips from 0 to its value, one after another.
+    tiles.forEach((el,k)=> flat[k]==="0" ? null : setTile(el, flat[k], 120 + k*70));
+    return;
+  }
+  tiles.forEach((el,k)=> setTile(el, flat[k], 0));
+}
+setInterval(()=>document.querySelectorAll(".countdown").forEach(b=>paintCountdown(b,false)), 1000);
+const isDuration = s => !!s && /^\s*(≈\s*)?\d+(\s*[–-]\s*\d+)?\s*(min|mins|hr|hrs|hour|hours)\b[\s\d]*(min|mins)?\s*$/i.test(s);
 const isTBC = s => !s || /\bTBC\b/i.test(s);
 const val = (s, fb="TBC") => (s && String(s).trim()) ? s : fb;
 const tbcNode = s => isTBC(s) ? h("span",{class:"chip tbc"}, s ? s : "TBC") : document.createTextNode(s);
@@ -122,7 +207,7 @@ function renderList(){
   if(!all.length){ box.append(h("div",{class:"empty"}, S.q ? "No callsheets match that search." : (S.admin ? "No callsheets yet. Press New to make the first one." : "No callsheets have been issued yet."))); return; }
   const grp = (label, arr, sub, bid) => {
     if(!arr.length) return;
-    const g = h("div",{class:"grp"+(bid?" b-"+bid:"")}, h("h2",null,label, sub ? h("span",{class:"grp-sub"}," · "+sub) : null));
+    const g = h("div",{class:"grp"}, h("h2",null,label, sub ? h("span",{class:"grp-sub"}," · "+sub) : null));
     for(const s of arr){
       const d = dObj(s.date), people=[...(s.crew||[]),...(s.cast||[])], cm=S.confirms.get(s.id)||new Map();
       const n = people.filter(p=>cm.has(p.id)).length;
@@ -151,7 +236,7 @@ function renderList(){
 async function signOut(){ await sb.auth.signOut(); S.admin=false; S.email=""; S.sel=null; if(S.codes.length) refresh(); else showGate(); }
 
 /* ---------- sheet view ---------- */
-function select(id){ S.sel=id; S.editing=null; S.delAsk=false; try{ history.replaceState(null,"","#"+id); }catch(e){} render(); window.scrollTo({top:0}); }
+function select(id){ S.sel=id; S.editing=null; S.delAsk=false; S.inline=false; try{ history.replaceState(null,"","#"+id); }catch(e){} render(); window.scrollTo({top:0}); }
 let flashMsg="";
 function flash(m){ flashMsg=m; render(); setTimeout(()=>{flashMsg=""; render();},4000); }
 
@@ -162,7 +247,11 @@ function confirmCell(sheet, p){
     const stale = (c.version||1) < (sheet.version||1);
     wrap.append(h("div",null, h("span",{class:"ok"},"Confirmed"), h("small",null, stale ? h("span",{class:"old"},"on v"+(c.version||1)+" · ") : null, fmtStamp(c.at))));
     if(stale) wrap.append(h("button",{class:"btn sm",onclick:()=>doConfirm(sheet,p)},"Reconfirm"));
-    if(S.admin) wrap.append(h("button",{class:"x",title:"Undo confirmation","aria-label":"Undo confirmation for "+(p.name||"this person"),onclick:()=>undoConfirm(sheet,p)},"×"));
+    const key = sheet.id+"|"+p.id;
+    if(S.undoAsk===key) wrap.append(h("span",{class:"undo-ask"}, "Undo "+(firstName(p.name))+"'s confirmation?",
+      h("button",{class:"btn sm",onclick:()=>{S.undoAsk=null; undoConfirm(sheet,p);}},"Undo"),
+      h("button",{class:"btn sm ghost",onclick:()=>{S.undoAsk=null; render();}},"Keep")));
+    else wrap.append(h("button",{class:"undo-link",title:"Undo confirmation","aria-label":"Undo confirmation for "+(p.name||"this person"),onclick:()=>{S.undoAsk=key; render();}},"undo"));
   } else wrap.append(h("button",{class:"btn sm",onclick:()=>doConfirm(sheet,p)},"Confirm"));
   return wrap;
 }
@@ -171,25 +260,67 @@ async function doConfirm(sheet,p){
   if(error){ flash(/no_person|no_sheet/.test(error.message||"") ? "This call sheet changed. Reload and try again." : "Couldn't save the confirmation. Try again."); return; }
   await refresh();
 }
+const firstName = n => (String(n||"").trim().split(/\s+/)[0]) || "this";
 async function undoConfirm(sheet,p){
-  const { error } = await sb.from("confirms").delete().eq("sheet",sheet.id).eq("person",p.id);
+  const { error } = await sb.rpc("hub_unconfirm", { p_codes:S.codes, p_sheet:sheet.id, p_person:p.id });
   if(error) flash("Couldn't undo that confirmation."); else refresh();
 }
 
-function peopleTable(sheet, rows, cols, label){
+function peopleTable(sheet, rows, key, cols, label){
   const cm = S.confirms.get(sheet.id) || new Map();
   const n = rows.filter(p=>cm.has(p.id)).length, pct = rows.length ? Math.round(n/rows.length*100) : 0;
   const sec = h("section",{class:"sec"}, h("div",{class:"sec-h"}, h("h3",null,label), rows.length ? h("span",{class:"count"}, n+" of "+rows.length+" confirmed", h("span",{class:"bar"}, h("i",{style:"width:"+pct+"%"}))) : null));
   if(!rows.length){ sec.append(h("div",{class:"empty"},"No names added yet.")); return sec; }
   const tb = h("tbody");
-  for(const p of rows) tb.append(h("tr",null,
-    h("td",null, tbcNode(p.name)),
-    ...cols.map(c=> c.k==="call" ? h("td",{class:"time"}, val(p.call,"—")) : h("td",null, p[c.k]||"")),
-    h("td",{class:"cfc"}, confirmCell(sheet,p))));
+  rows.forEach((p,i)=> tb.append(h("tr",null,
+    E("td",null,`${key}.${i}.name`, tbcNode(p.name),{ph:"name"}),
+    ...cols.map(c=> c.k==="call" ? E("td",{class:"time"},`${key}.${i}.call`, val(p.call,"—"),{ph:"call"}) : E("td",null,`${key}.${i}.${c.k}`, p[c.k]||"",{ph:c.l.toLowerCase()})),
+    h("td",{class:"cfc"}, confirmCell(sheet,p)))));
   sec.append(h("div",{class:"tbl"}, h("table",{class:"people"},
     h("thead",null,h("tr",null,h("th",null,"Name"),...cols.map(c=>h("th",null,c.l)),h("th",{style:"text-align:right"},"Read & confirmed"))), tb)));
   return sec;
 }
+
+/* ---------- edit on page (production only) ---------- */
+const getPath = (o,p) => p.split(".").reduce((a,k)=>a==null?a:a[k], o);
+function setPath(o,p,v){ const ks=p.split("."); let x=o; for(let i=0;i<ks.length-1;i++){ if(x[ks[i]]==null) x[ks[i]] = /^\d+$/.test(ks[i+1]) ? [] : {}; x=x[ks[i]]; } x[ks[ks.length-1]]=v; }
+// E(): normal display, or, while editing on the page, the raw value as a typeable field tied to its place in the data.
+function E(tag, attrs, path, display, opts={}){
+  if(!S.inline) return h(tag, attrs, display);
+  const raw = getPath(S.sheets.get(S.sel)||{}, path);
+  const a = {...(attrs||{})}; a.class = ((a.class||"")+" ie").trim();
+  a["data-path"]=path; a["data-ph"]=opts.ph||"add…"; if(opts.multi) a["data-multi"]="1";
+  return h(tag, a, raw==null ? "" : String(raw));
+}
+function ieState(t, cls){ const el=$("ieState"); if(el){ el.textContent=t; el.className="ie-state "+(cls||""); } }
+async function inlineSave(fn){
+  const id=S.sel, cur=S.sheets.get(id); if(!cur) return false;
+  const d=JSON.parse(JSON.stringify(cur)); fn(d); d.updated=new Date().toISOString();
+  S.sheets.set(id,d); ieState("saving…");
+  const { error } = await sb.from("callsheets").update({ data:d, updated_at:d.updated }).eq("id",id);
+  if(error){ S.sheets.set(id,cur); ieState("couldn't save, try again","err"); return false; }
+  ieState("saved","ok"); return true;
+}
+function enableInline(root){
+  root.querySelectorAll("[data-path]").forEach(el=>{
+    el.contentEditable="plaintext-only"; if(el.contentEditable!=="plaintext-only") el.contentEditable="true";
+    el.spellcheck=true;
+    el.addEventListener("click", e=>{ e.preventDefault(); e.stopPropagation(); });
+    el.addEventListener("keydown", e=>{
+      if(e.key==="Escape"){ el.textContent = String(getPath(S.sheets.get(S.sel)||{}, el.dataset.path) ?? ""); el.blur(); }
+      else if(e.key==="Enter" && !el.dataset.multi){ e.preventDefault(); el.blur(); }
+    });
+    el.addEventListener("blur", ()=>{
+      const path=el.dataset.path, old=String(getPath(S.sheets.get(S.sel)||{}, path) ?? "");
+      let v=el.innerText.replace(/ /g," ").replace(/\r/g,"");
+      v = el.dataset.multi ? v.split("\n").map(x=>x.trimEnd()).join("\n").replace(/^\n+|\n+$/g,"") : v.replace(/\s*\n\s*/g," ").trim();
+      if(v===old) return;
+      const m=/^notes\.(\d+)$/.exec(path);
+      inlineSave(d=>{ if(m && !v){ (d.notes||[]).splice(+m[1],1); } else setPath(d,path,v); }).then(ok=>{ if(m && !v && ok) renderSheet(); });
+    });
+  });
+}
+function toggleInline(){ S.inline=!S.inline; S.reissueAsk=false; render(); if(!S.inline) refresh(); }
 
 function renderSheet(){
   const main = $("main"); main.replaceChildren();
@@ -198,41 +329,116 @@ function renderSheet(){
   const raw = S.sheets.get(S.sel);
   if(!raw){ main.append(h("div",{class:"placeholder"}, S.sheets.size ? "Pick a call sheet from the list." : "No call sheets yet.")); return; }
   const s = {id:S.sel, ...raw}, loc = s.location||{};
-  const sheet = h("article",{class:"sheet"+(S.brandOf.get(s.id)?" b-"+S.brandOf.get(s.id):"")});
-  sheet.append(h("div",{class:"sheet-top"},
-    h("div",null,
-      h("div",{class:"kicker"}, h("span",{class:"cs"}, brandName(S.brandOf.get(s.id))), h("span",null,"Call sheet"), s.dayOf? h("span",null,s.dayOf):null, statusChip(s.status), h("span",{class:"chip"},"v"+(s.version||1))),
-      h("h2",null, s.project||"Untitled"),
-      h("p",{class:"sub"}, [s.title, s.client && s.client!==s.project ? "for "+s.client : null].filter(Boolean).join(" · ")),
-      h("p",{class:"when"}, fmtLong(s.date)+" · "+rel(s.date))),
-    h("div",{class:"callbox"}, h("span",null,"General crew call"), h("b",null, val(s.crewCall,"TBC")), h("small",null, s.hours ? "Venue "+s.hours : ""))));
+  const bid = S.brandOf.get(s.id)||"";
+  const ozf = bid==="onezerofive";
+  const sheet = h("article",{class:"sheet"+(bid?" b-"+bid:"")+(ozf?" ozf":"")});
+  if(ozf){
+    sheet.append(h("div",{class:"sheet-top ozf-top"},
+      h("div",{class:"ozf-left"},
+        h("div",{class:"kicker"}, h("span",{class:"cs"},"onezerofive"), statusChip(s.status)),
+        E("h2",null,"title", (s.title||s.project||"call sheet").toLowerCase(),{ph:"title"}),
+        h("p",{class:"sub"}, "call sheet"),
+        h("div",{class:"crewcall"}, h("span",{class:"k"},"crew call"), E("b",null,"crewCall", val(s.crewCall,"tbc"),{ph:"08:00"}))),
+      h("div",{class:"ozf-right"},
+        countdownClock(s.date, s.crewCall),
+        h("p",{class:"when"}, fmtLong(s.date).toLowerCase()),
+        (s.dayOf||S.inline) ? E("p",{class:"dayof"},"dayOf", (s.dayOf||"").toLowerCase(),{ph:"day 1 of 2"}) : null)));
+  } else {
+    sheet.append(h("div",{class:"sheet-top"},
+      h("div",null,
+        h("div",{class:"kicker"}, h("span",{class:"cs"}, brandName(bid)), h("span",null,"Call sheet"), s.dayOf? h("span",null,s.dayOf):null, statusChip(s.status), h("span",{class:"chip"},"v"+(s.version||1))),
+        E("h2",null,"project", s.project||"Untitled",{ph:"project"}),
+        h("p",{class:"sub"}, [s.title, s.client && s.client!==s.project ? "for "+s.client : null].filter(Boolean).join(" · ")),
+        h("p",{class:"when"}, fmtLong(s.date)+" · "+rel(s.date))),
+      h("div",{class:"callbox"}, h("span",null,"General crew call"), E("b",null,"crewCall", val(s.crewCall,"TBC"),{ph:"08:00"}), h("small",null, s.hours ? "Venue "+s.hours : ""))));
+  }
   const act = h("div",{class:"actions"}, h("button",{class:"btn back",onclick:()=>{S.sel=null;render();}},"← All call sheets"), h("span",{class:"sp"}));
   if(S.admin){
     if(S.delAsk) act.append(h("span",{class:"inline-confirm"},"Delete this call sheet and its confirmations?", h("button",{class:"btn sm danger",onclick:()=>delSheet(s.id)},"Delete"), h("button",{class:"btn sm",onclick:()=>{S.delAsk=false;render();}},"Cancel")));
-    else act.append(h("button",{class:"btn",onclick:()=>startEdit(s.id,false)},"Edit"), h("button",{class:"btn",onclick:()=>startEdit(s.id,true)},"Duplicate"), h("button",{class:"btn danger",onclick:()=>{S.delAsk=true;render();}},"Delete"));
+    else if(S.inline){
+      act.append(h("button",{class:"btn primary",onclick:toggleInline},"Done"), h("span",{id:"ieState",class:"ie-state"},""));
+      if(S.reissueAsk) act.append(h("span",{class:"inline-confirm"},"Ask everyone who confirmed to reconfirm?",
+        h("button",{class:"btn sm",onclick:async()=>{ S.reissueAsk=false; if(await inlineSave(d=>{d.version=(d.version||1)+1;})) render(); }},"Re-issue"),
+        h("button",{class:"btn sm",onclick:()=>{S.reissueAsk=false;render();}},"Cancel")));
+      else act.append(h("button",{class:"btn",onclick:()=>{S.reissueAsk=true;render();}},"Re-issue (v"+((s.version||1)+1)+")"));
+    }
+    else act.append(h("button",{class:"btn primary",onclick:toggleInline},"Edit on page"), h("button",{class:"btn",onclick:()=>startEdit(s.id,false)},"Full editor"), h("button",{class:"btn",onclick:()=>startEdit(s.id,true)},"Duplicate"), h("button",{class:"btn danger",onclick:()=>{S.delAsk=true;render();}},"Delete"));
   }
   if(S.admin || mobile()) sheet.append(act);
   if(flashMsg) sheet.append(h("div",{class:"banner"},flashMsg));
-  const facts = [["Location",[loc.name,loc.address].filter(Boolean).join("\n")],["Venue hours",s.hours],["Sunset",s.sunset],["Weather",s.weather],["Nearest A&E",s.hospital],["Parking & access",s.parking]];
-  sheet.append(h("div",{class:"facts"}, ...facts.map(([k,v])=>h("div",{class:"fact"},h("span",{class:"k"},k), h("span",{class:"v"}, isTBC(v)? tbcNode(v) : v)))));
-  if(loc.notes) sheet.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Location notes")), h("p",{style:"margin:0;white-space:pre-line"},loc.notes)));
-  if((s.contacts||[]).length) sheet.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Key contacts")),
-    h("div",{class:"contacts"}, ...s.contacts.map(c=>h("div",{class:"contact"}, h("b",null,c.name||"TBC"), h("span",{class:"r"},c.role||""), c.phone?h("span",{class:"n"},c.phone):null, c.email?h("span",{class:"n"},c.email):null)))));
+  if(S.inline) sheet.append(h("div",{class:"banner ie-help"},"Click any text to change it. It saves when you click away (Enter for a new line in lists and notes, Esc to cancel). Crew aren't asked to reconfirm unless you press Re-issue. Add or remove rows, dates and brand in the Full editor."));
+  const locFact = [loc.label||"Location",[loc.name,loc.address].filter(Boolean).join("\n"),loc];
+  const hospLoc = s.hospital && !isTBC(s.hospital) ? {name: s.hospitalMaps || String(s.hospital).split(/\n| · /)[0]} : null;
+  const loc2 = s.location2||{}, has2 = !!(loc2.name||loc2.address);
+  const loc2Fact = has2 ? [[loc2.label||"Studio location",[loc2.name,loc2.address].filter(Boolean).join("\n"),loc2]] : [];
+  const facts = ozf
+    ? [locFact,...loc2Fact,["Nearest underground",s.tube,"list"],["Nearest A&E",s.hospital,hospLoc],["Weather",s.weather,"list"],["Parking & access",s.parking,"list"]]
+    : [locFact,...loc2Fact,["Venue hours",s.hours],["Sunset",s.sunset],["Weather",s.weather],["Nearest A&E",s.hospital,hospLoc],["Parking & access",s.parking]];
+  const contactsSec = (s.contacts||[]).length ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Key contacts")),
+    h("div",{class:"contacts"}, ...s.contacts.map((c,i)=>h("div",{class:"contact"}, E("b",null,`contacts.${i}.name`,c.name||"TBC",{ph:"name"}), E("span",{class:"r"},`contacts.${i}.role`,c.role||"",{ph:"role"}), (c.phone||S.inline)?E("span",{class:"n"},`contacts.${i}.phone`,c.phone,{ph:"phone"}):null, (c.email||S.inline)?E("span",{class:"n"},`contacts.${i}.email`,c.email,{ph:"email"}):null)))) : null;
+  let schedSec = null;
   if((s.schedule||[]).length){
     const tb=h("tbody");
-    for(const r of s.schedule) tb.append(h("tr",{class:r.kind||""},
-      h("td",{class:"time"}, r.start||"", r.end? h("span",null," – "+r.end):null),
-      h("td",null, h("strong",null,r.title||""), r.detail? h("span",{class:"d"},r.detail):null, r.who? h("span",{class:"who"},r.who):null)));
-    sheet.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Running order")), h("div",{class:"tbl"},h("table",{class:"sched"},tb))));
+    s.schedule.forEach((r,i)=>{ const P=`schedule.${i}.`; tb.append(h("tr",{class:r.kind||""},
+      S.inline ? h("td",{class:"time"}, E("span",{class:"t0"},P+"start","",{ph:"start"}), h("span",{class:"t1"}," – "), E("span",{class:"t1"},P+"end","",{ph:"end"}))
+        : h("td",{class:"time"}, h("span",{class:"t0"},r.start||""), r.end? h("span",{class:"t1"}," – "+r.end):null),
+      (()=>{ const dur = !S.inline && ozf && isDuration(r.detail) ? r.detail : "";
+        if(S.inline) return h("td",null, h("div",{class:"line"}, E("strong",null,P+"title","",{ph:"item"})),
+          E("span",{class:"d"},P+"detail","",{ph:"detail / run time (one per line for a list)",multi:true}), E("span",{class:"who"},P+"who","",{ph:"who"}));
+        return h("td",null, h("div",{class:"line"}, dur ? h("span",{class:"dur"},dur) : null, h("strong",null,r.title||"")),
+          r.detail && !dur ? descNode(r.detail,"d") : null, r.who? h("span",{class:"who"},r.who):null); })())); });
+    schedSec = h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Running order"), ozf ? h("span",{class:"count"}, s.schedule.length+" items") : null), h("div",{class:"tbl"},h("table",{class:"sched"},tb)));
   }
-  sheet.append(peopleTable(s, s.crew||[], [{k:"role",l:"Role"},{k:"call",l:"Call"},{k:"base",l:"Base"}], "Crew"));
-  sheet.append(peopleTable(s, s.cast||[], [{k:"role",l:"Role / wave"},{k:"call",l:"Call"},{k:"notes",l:"Notes"}], "Cast & talent"));
-  if((s.notes||[]).length) sheet.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Notes")), h("ul",{class:"list"}, ...s.notes.map(n=>h("li",null,n)))));
-  if((s.open||[]).length) sheet.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Still to confirm"),h("span",{class:"count"},s.open.length+" open")),
-    h("div",{class:"tbl"},h("table",{class:"open",style:"min-width:520px"}, h("thead",null,h("tr",null,h("th",null,"Item"),h("th",null,"Detail"),h("th",null,"Owner"))),
-      h("tbody",null, ...s.open.map(o=>h("tr",null,h("td",null,o.item||""),h("td",null,o.detail||""),h("td",null,o.owner||""))))))));
+  const notesSec = (s.notes||[]).length ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Notes")), h("ul",{class:"list"}, ...s.notes.map((n,i)=>E("li",null,`notes.${i}`,n,{ph:"note (clear it to remove)"})))) : null;
+  const openSec = (s.open||[]).length ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Still to confirm"),h("span",{class:"count"},s.open.length+" open")),
+    h("div",{class:"tbl"},h("table",{class:"open"}, h("thead",null,h("tr",null,h("th",null,"Item"),h("th",null,"Detail"),h("th",null,"Owner"))),
+      h("tbody",null, ...s.open.map((o,i)=>h("tr",null,E("td",null,`open.${i}.item`,o.item||"",{ph:"item"}),E("td",null,`open.${i}.detail`,o.detail||"",{ph:"detail"}),E("td",null,`open.${i}.owner`,o.owner||"",{ph:"owner"}))))))) : null;
+  const crewSec = peopleTable(s, s.crew||[], "crew", [{k:"role",l:"Role"},{k:"call",l:"Call"},{k:"base",l:"Base"}], "Crew");
+  const castSec = peopleTable(s, s.cast||[], "cast", [{k:"role",l:"Role / wave"},{k:"call",l:"Call"},{k:"notes",l:"Notes"}], "Cast & talent");
+  if(S.inline){
+    const F=(k,paths,o={})=>h("div",{class:"fact"}, o.kpath ? E("span",{class:"k"},o.kpath,k,{ph:k}) : h("span",{class:"k"},k),
+      ...paths.map(([p,ph])=>E("span",{class:"v ie-line"},p,"",{ph,multi:o.multi})));
+    const L=[F(loc.label||"Location",[["location.name","venue"],["location.address","address"]],{kpath:"location.label"})];
+    if(has2) L.push(F(loc2.label||"Studio location",[["location2.name","venue"],["location2.address","address"]],{kpath:"location2.label"}));
+    if(!ozf) L.push(F("Venue hours",[["hours","08:00–18:00"]]), F("Sunset",[["sunset","≈ 16:10"]]));
+    if(ozf) L.push(F("Nearest underground",[["tube","one point per line"]],{multi:true}));
+    L.push(F("Nearest A&E",[["hospital","hospital, road, area"]]), F("Weather",[["weather","weather"]],{multi:true}), F("Parking & access",[["parking","parking & access"]],{multi:true}));
+    sheet.append(h("div",{class:"facts"}, ...L));
+    sheet.append(h("div",{class:"dayline"}, E("p",null,"location.notes","",{ph:"location / day notes",multi:true})));
+    for(const x of (ozf ? [schedSec, castSec, crewSec, notesSec, contactsSec, openSec] : [contactsSec, schedSec, crewSec, castSec, notesSec, openSec])) if(x) sheet.append(x);
+  } else if(ozf){
+    // Only facts that are filled in; anything still TBC is listed once, quietly.
+    const filled = facts.filter(([,v])=>!isTBC(v)), tbc = facts.filter(([,v])=>isTBC(v)).map(([k])=>k.toLowerCase());
+    sheet.append(h("div",{class:"facts"}, ...filled.map(([k,v,l])=>factNode(k,v,l))));
+    if(loc.notes || tbc.length) sheet.append(h("div",{class:"dayline"},
+      loc.notes ? h("p",null, loc.notes) : null,
+      tbc.length ? h("p",{class:"tbcline"}, "still to confirm: "+tbc.join(", ")) : null));
+    for(const x of [schedSec, castSec, crewSec, notesSec, contactsSec, openSec]) if(x) sheet.append(x);
+  } else {
+    sheet.append(h("div",{class:"facts"}, ...facts.map(([k,v,l])=>isTBC(v) ? h("div",{class:"fact"},h("span",{class:"k"},k), h("span",{class:"v"},tbcNode(v))) : factNode(k,v,l))));
+    if(loc.notes) sheet.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Location notes")), h("p",{style:"margin:0;white-space:pre-line"},loc.notes)));
+    for(const x of [contactsSec, schedSec, crewSec, castSec, notesSec, openSec]) if(x) sheet.append(x);
+  }
   sheet.append(h("div",{class:"foot"}, h("span",null,"Version "+(s.version||1)), s.updated? h("span",null,"Updated "+fmtStamp(s.updated)) : null, h("span",null,"Tap Confirm next to your name once you've read your call time")));
   main.append(sheet);
+  if(S.inline) enableInline(sheet);
+  else if(ozf) setupReveal(sheet);
+}
+// Fade content up as it scrolls into view (only what starts below the fold; skipped for reduced motion).
+let revealObserver = null;
+function setupReveal(root){
+  if(!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if(revealObserver) revealObserver.disconnect();
+  revealObserver = new IntersectionObserver(entries=>{
+    for(const e of entries) if(e.isIntersecting){ e.target.classList.add("rv-in"); revealObserver.unobserve(e.target); }
+  }, {rootMargin:"0px 0px -5% 0px", threshold:0.05});
+  const vh = window.innerHeight;
+  const sel = ".fact,.dayline,.sec-h,.sched tr,.people tr,.contact,ul.list li,.open tr";
+  root.querySelectorAll(sel).forEach(el=>{
+    if(el.getBoundingClientRect().top < vh) return;
+    if(el.parentElement && el.parentElement.closest(sel)) return; // nested (e.g. a list inside a row): the parent reveals it
+    el.classList.add("rv"); revealObserver.observe(el);
+  });
 }
 async function delSheet(id){
   const { error } = await sb.from("callsheets").delete().eq("id",id);
@@ -250,10 +456,12 @@ const LISTS = {
   open:{label:"Still to confirm", cols:[["item","Item","1fr"],["detail","Detail","2fr"],["owner","Owner","1fr"]]}
 };
 const KINDS=[["","Standard"],["shoot","Shooting"],["call","Call time"],["meal","Break / meal"]];
-const blank = () => ({project:"",client:"",title:"",date:todayISO(),dayOf:"",status:"draft",crewCall:"",hours:"",sunset:"",weather:"",hospital:"",parking:"",location:{name:"",address:"",notes:""},contacts:[],schedule:[],crew:[],cast:[],notes:[],open:[]});
+const blank = () => ({project:"",client:"",title:"",date:todayISO(),dayOf:"",status:"draft",crewCall:"",hours:"",sunset:"",weather:"",hospital:"",parking:"",location:{name:"",address:"",notes:""},location2:{label:"",name:"",address:""},contacts:[],schedule:[],crew:[],cast:[],notes:[],open:[]});
 function startEdit(id, dup){
+  S.inline=false;
   const d = id ? JSON.parse(JSON.stringify(S.sheets.get(id)||blank())) : blank();
   d.location = d.location||{name:"",address:"",notes:""};
+  d.location2 = d.location2||{label:"",name:"",address:""};
   for(const k of Object.keys(LISTS)) d[k]=d[k]||[];
   d.notes=d.notes||[];
   if(dup){ d.status="draft"; d.title=(d.title||"")+" (copy)"; for(const p of [...d.crew,...d.cast]) p.id="p"+rid(); }
@@ -277,6 +485,7 @@ function listEditor(d, key){
       ...L.cols.map(([k,l])=>{
         const id="e-"+key+"-"+i+"-"+k;
         if(k==="kind") return h("select",{id,"aria-label":l,oninput:e=>{r[k]=e.target.value;}}, ...KINDS.map(([v,t])=>{const o=h("option",{value:v},t); if((r.kind||"")===v) o.selected=true; return o;}));
+        if(key==="schedule" && k==="detail"){ const ta=h("textarea",{id,"aria-label":l,placeholder:"Detail (one per line for a list)",rows:1,class:"cell-area",oninput:e=>{r[k]=e.target.value;}}); ta.value=r[k]||""; return ta; }
         const inp=h("input",{id,"aria-label":l,placeholder:l,oninput:e=>{r[k]=e.target.value;}}); inp.value=r[k]||""; return inp;
       }),
       h("button",{class:"x",type:"button","aria-label":"Remove row",title:"Remove row",onclick:()=>{d[key].splice(i,1); renderSheet();}},"×")));
@@ -299,9 +508,10 @@ function renderEditor(){
       field(d,"date","Date",{type:"date"}), field(d,"dayOf","Day",{ph:"Day 1 of 2"}),
       field(d,"status","Status",{options:[["draft","Draft"],["issued","Issued"],["wrapped","Wrapped"]]}),
       field(d,"crewCall","General crew call",{ph:"08:00"}), field(d,"hours","Venue hours",{ph:"08:00–18:00"}), field(d,"sunset","Sunset",{ph:"≈ 16:10"}),
-      field(d,"weather","Weather"), field(d,"hospital","Nearest A&E"), field(d,"parking","Parking & access"))));
+      field(d,"weather","Weather"), field(d,"tube","Nearest underground (one point per line)",{area:true}), field(d,"hospital","Nearest A&E"), field(d,"parking","Parking & access"))));
   wrap.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Location")),
-    h("div",{class:"fgrid"}, field(d,"location.name","Venue"), field(d,"location.address","Address"), field(d,"location.notes","Location notes",{area:true,wide:true}))));
+    h("div",{class:"fgrid"}, field(d,"location.label","Location label",{ph:"Location"}), field(d,"location.name","Venue"), field(d,"location.address","Address"), field(d,"location.notes","Location notes",{area:true,wide:true}),
+      field(d,"location2.label","Second location label",{ph:"Studio location"}), field(d,"location2.name","Second location"), field(d,"location2.address","Second location address"))));
   for(const k of ["contacts","schedule","crew","cast"]) wrap.append(listEditor(d,k));
   const notesArea=h("textarea",{id:"e-notes",oninput:e=>{d.notes=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);}}); notesArea.value=(d.notes||[]).join("\n");
   wrap.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Notes")), h("div",{class:"f"}, h("label",{for:"e-notes"},"One note per line"), notesArea)));
@@ -343,8 +553,8 @@ async function boot(){
   S.codes = loadCodes(); saveCodes();
   if(!S.admin && !S.codes.length){ showGate(); return; }
   showApp(); render(); await refresh();
-  setInterval(()=>{ if(!document.hidden && !S.editing && !$("app").hidden) refresh(); }, 60000);
-  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && !S.editing && !$("app").hidden) refresh(); });
+  setInterval(()=>{ if(!document.hidden && !S.editing && !S.inline && !$("app").hidden) refresh(); }, 60000);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && !S.editing && !S.inline && !$("app").hidden) refresh(); });
 }
 boot();
 })();
