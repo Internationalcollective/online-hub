@@ -293,34 +293,64 @@ function E(tag, attrs, path, display, opts={}){
   return h(tag, a, raw==null ? "" : String(raw));
 }
 function ieState(t, cls){ const el=$("ieState"); if(el){ el.textContent=t; el.className="ie-state "+(cls||""); } }
-async function inlineSave(fn){
-  const id=S.sel, cur=S.sheets.get(id); if(!cur) return false;
-  const d=JSON.parse(JSON.stringify(cur)); fn(d); d.updated=new Date().toISOString();
-  S.sheets.set(id,d); ieState("saving…");
-  const { error } = await sb.from("callsheets").update({ data:d, updated_at:d.updated }).eq("id",id);
-  if(error){ S.sheets.set(id,cur); ieState("couldn't save, try again","err"); return false; }
-  ieState("saved","ok"); return true;
+let ieQueue = Promise.resolve(), ieDirty = 0;
+// Saves run one after another so quick edits never overwrite each other.
+function inlineSave(fn, sheetId){
+  const id = sheetId || S.sel;
+  const run = async()=>{
+    const cur=S.sheets.get(id); if(!cur) return false;
+    const d=JSON.parse(JSON.stringify(cur)); fn(d); d.updated=new Date().toISOString();
+    S.sheets.set(id,d); ieState("saving…");
+    const { data, error } = await sb.from("callsheets").update({ data:d, updated_at:d.updated }).eq("id",id).select("id");
+    if(error || !data || !data.length){
+      S.sheets.set(id,cur);
+      ieState(error ? "not saved: "+(error.message||"try again") : "not saved: sign in again as production", "err");
+      return false;
+    }
+    ieState("saved "+new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}),"ok"); return true;
+  };
+  const p = ieQueue.then(run, run); ieQueue = p.catch(()=>false); return p;
+}
+function ieValue(el){
+  let v=el.innerText.replace(/ /g," ").replace(/\r/g,"");
+  return el.dataset.multi ? v.split("\n").map(x=>x.trimEnd()).join("\n").replace(/^\n+|\n+$/g,"") : v.replace(/\s*\n\s*/g," ").trim();
+}
+// Save one field if it changed. final=true on leaving the field (only then does an emptied note get removed).
+function ieCommit(el, final){
+  clearTimeout(el._t); el._t=null;
+  const path=el.dataset.path, sid=el.dataset.sheet, old=String(getPath(S.sheets.get(sid)||{}, path) ?? ""), v=ieValue(el);
+  if(v===old){ return ieQueue; }
+  const m=/^notes\.(\d+)$/.exec(path);
+  if(m && !v && !final) return ieQueue;
+  ieDirty++;
+  return inlineSave(d=>{ if(m && !v){ (d.notes||[]).splice(+m[1],1); } else setPath(d,path,v); }, sid)
+    .then(ok=>{ ieDirty--; if(m && !v && ok && S.inline && S.sel===sid) renderSheet(); return ok; });
 }
 function enableInline(root){
   root.querySelectorAll("[data-path]").forEach(el=>{
     el.contentEditable="plaintext-only"; if(el.contentEditable!=="plaintext-only") el.contentEditable="true";
-    el.spellcheck=true;
-    el.addEventListener("click", e=>{ e.preventDefault(); e.stopPropagation(); });
+    el.spellcheck=true; el.dataset.sheet=S.sel;
+    el.addEventListener("click", e=>e.stopPropagation());
     el.addEventListener("keydown", e=>{
-      if(e.key==="Escape"){ el.textContent = String(getPath(S.sheets.get(S.sel)||{}, el.dataset.path) ?? ""); el.blur(); }
+      if(e.key==="Escape"){ clearTimeout(el._t); el._t=null; el.textContent = String(getPath(S.sheets.get(S.sel)||{}, el.dataset.path) ?? ""); el.blur(); }
       else if(e.key==="Enter" && !el.dataset.multi){ e.preventDefault(); el.blur(); }
     });
-    el.addEventListener("blur", ()=>{
-      const path=el.dataset.path, old=String(getPath(S.sheets.get(S.sel)||{}, path) ?? "");
-      let v=el.innerText.replace(/ /g," ").replace(/\r/g,"");
-      v = el.dataset.multi ? v.split("\n").map(x=>x.trimEnd()).join("\n").replace(/^\n+|\n+$/g,"") : v.replace(/\s*\n\s*/g," ").trim();
-      if(v===old) return;
-      const m=/^notes\.(\d+)$/.exec(path);
-      inlineSave(d=>{ if(m && !v){ (d.notes||[]).splice(+m[1],1); } else setPath(d,path,v); }).then(ok=>{ if(m && !v && ok) renderSheet(); });
-    });
+    // Save a moment after typing stops, and again when leaving the field.
+    el.addEventListener("input", ()=>{ clearTimeout(el._t); ieState("editing…"); el._t=setTimeout(()=>ieCommit(el,false), 900); });
+    el.addEventListener("blur", ()=>ieCommit(el,true));
   });
 }
-function toggleInline(){ S.inline=!S.inline; S.reissueAsk=false; render(); if(!S.inline) refresh(); }
+function iePending(){ return [...document.querySelectorAll("[data-path]")].some(el=>el._t) || ieDirty>0; }
+window.addEventListener("beforeunload", e=>{ if(S.inline && iePending()){ e.preventDefault(); e.returnValue=""; } });
+async function toggleInline(){
+  if(S.inline){
+    const els=[...document.querySelectorAll("[data-path]")];
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    await Promise.all(els.map(el=>ieCommit(el,true)));
+    await ieQueue;
+  }
+  S.inline=!S.inline; S.reissueAsk=false; render(); if(!S.inline) refresh();
+}
 
 function renderSheet(){
   const main = $("main"); main.replaceChildren();
