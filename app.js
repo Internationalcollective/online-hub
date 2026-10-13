@@ -185,20 +185,15 @@ $("codeForm").addEventListener("submit", async e=>{
 });
 $("gateBack").addEventListener("click", ()=>{ showApp(); render(); });
 $("showSignin").addEventListener("click", ()=>{ $("signinForm").hidden = !$("signinForm").hidden; if(!$("signinForm").hidden) $("email").focus(); });
-$("pw").addEventListener("input", ()=>{ $("signinBtn").textContent = $("pw").value ? "Sign in" : "Email me a sign-in link"; });
 $("signinForm").addEventListener("submit", async e=>{
   e.preventDefault(); if(!sb) return;
   const email = $("email").value.trim().toLowerCase(), password = $("pw").value;
   const say = (t, bad) => { $("signinMsg").textContent = t; $("signinMsg").className = "msg" + (bad ? " err" : ""); };
-  if(password){
-    say("Signing in…");
-    const { error } = await sb.auth.signInWithPassword({ email, password });
-    if(error){ say(/invalid/i.test(error.message||"") ? "That email and password don't match. Leave the password empty to get an email link instead." : "Couldn't sign in: "+error.message, true); return; }
-    $("pw").value=""; location.reload(); return;
-  }
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname, shouldCreateUser:false } });
-  if(error) say(/rate limit/i.test(error.message||"") ? "Too many sign-in emails in the last hour (Supabase's free limit). Use your latest unused link, try again in an hour, or sign in with your password." : "Couldn't send the link: " + error.message, true);
-  else say("Check your inbox for a sign-in link from Supabase. Open it on this device.");
+  if(!email || !password){ say("Enter your production email and password.", true); return; }
+  say("Signing in…");
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ say(/invalid/i.test(error.message||"") ? "That email and password don't match." : "Couldn't sign in: "+error.message, true); return; }
+  $("pw").value=""; location.reload();
 });
 // Signed-in production can set a password so they don't need an email link every time.
 function setPwForm(){
