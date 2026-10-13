@@ -185,13 +185,32 @@ $("codeForm").addEventListener("submit", async e=>{
 });
 $("gateBack").addEventListener("click", ()=>{ showApp(); render(); });
 $("showSignin").addEventListener("click", ()=>{ $("signinForm").hidden = !$("signinForm").hidden; if(!$("signinForm").hidden) $("email").focus(); });
+$("pw").addEventListener("input", ()=>{ $("signinBtn").textContent = $("pw").value ? "Sign in" : "Email me a sign-in link"; });
 $("signinForm").addEventListener("submit", async e=>{
   e.preventDefault(); if(!sb) return;
-  const email = $("email").value.trim();
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname, shouldCreateUser:true } });
-  $("signinMsg").textContent = error ? "Couldn't send the link: " + error.message : "Check your inbox for a sign-in link from Supabase.";
-  $("signinMsg").className = "msg" + (error ? " err" : "");
+  const email = $("email").value.trim().toLowerCase(), password = $("pw").value;
+  const say = (t, bad) => { $("signinMsg").textContent = t; $("signinMsg").className = "msg" + (bad ? " err" : ""); };
+  if(password){
+    say("Signing in…");
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ say(/invalid/i.test(error.message||"") ? "That email and password don't match. Leave the password empty to get an email link instead." : "Couldn't sign in: "+error.message, true); return; }
+    $("pw").value=""; location.reload(); return;
+  }
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname, shouldCreateUser:false } });
+  if(error) say(/rate limit/i.test(error.message||"") ? "Too many sign-in emails in the last hour (Supabase's free limit). Use your latest unused link, try again in an hour, or sign in with your password." : "Couldn't send the link: " + error.message, true);
+  else say("Check your inbox for a sign-in link from Supabase. Open it on this device.");
 });
+// Signed-in production can set a password so they don't need an email link every time.
+function setPwForm(){
+  const box=h("form",{class:"setpw"}, h("label",{class:"k",for:"newpw"},"Set a password for next time"),
+    h("input",{id:"newpw",type:"password",autocomplete:"new-password",minlength:"8",placeholder:"at least 8 characters",required:true}),
+    h("button",{class:"btn sm",type:"submit"},"Save password"), h("span",{class:"msg",id:"pwMsg",role:"status"}));
+  box.addEventListener("submit", async e=>{ e.preventDefault();
+    const { error } = await sb.auth.updateUser({ password: $("newpw").value });
+    $("pwMsg").textContent = error ? "Couldn't save it: "+error.message : "Saved. Next time, sign in with your email and this password.";
+    $("pwMsg").className = "msg"+(error?" err":""); if(!error) $("newpw").value=""; });
+  return box;
+}
 
 /* ---------- list ---------- */
 function filtered(){
@@ -229,7 +248,7 @@ function renderList(){
     grp(name, up, "Upcoming", b); grp(name, past, "Past", b);
   }
   const who = $("who"); who.replaceChildren();
-  if(S.admin) who.append(h("span",null,"Signed in as "+S.email), h("button",{class:"linkbtn",onclick:signOut},"Sign out"));
+  if(S.admin) who.append(h("span",null,"Signed in as "+S.email), h("button",{class:"linkbtn",onclick:signOut},"Sign out"), h("button",{class:"linkbtn",onclick:()=>{ S.showPw=!S.showPw; renderList(); }}, S.showPw?"Hide password":"Set a password"), S.showPw ? (S.pwBox ||= setPwForm()) : null);
   who.append(h("button",{class:"linkbtn",onclick:()=>showGate("", true)},"Add another shoot's passcode"));
   if(!S.admin) who.append(h("button",{class:"linkbtn",onclick:()=>{ S.codes=[]; saveCodes(); showGate(); }},"Lock this device"));
 }

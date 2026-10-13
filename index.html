@@ -151,6 +151,9 @@ ul.list li::before{content:"";position:absolute;left:0;top:.62em;width:7px;heigh
 .undo-link:hover{color:var(--ink)}
 .undo-ask{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--ink)}
 .btn.ghost{background:none}
+.gate .opt{letter-spacing:.04em;text-transform:none;opacity:.8}
+.setpw{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.setpw input{padding:8px 10px;border:1px solid var(--line);font:inherit}
 /* Edit on page (production) */
 .ie{text-transform:none !important;outline:1px dashed transparent;outline-offset:3px;border-radius:2px;cursor:text;transition:outline-color .15s,background .15s;min-width:2ch}
 .ie:hover{outline-color:var(--grey1,#BEC1C4)}
@@ -466,7 +469,9 @@ html,body{margin:0}
   <form id="signinForm" hidden>
     <label class="k" for="email">Your production email</label>
     <input id="email" type="email" autocomplete="email" required>
-    <button class="btn" type="submit">Email me a sign-in link</button>
+    <label class="k" for="pw">Password <span class="opt">(if you've set one)</span></label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button class="btn" type="submit" id="signinBtn">Email me a sign-in link</button>
     <span id="signinMsg" class="msg" role="status"></span>
   </form>
 </div>
@@ -488,7 +493,7 @@ html,body{margin:0}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="config.js?v=23"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>
