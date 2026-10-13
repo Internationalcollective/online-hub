@@ -184,15 +184,15 @@ $("codeForm").addEventListener("submit", async e=>{
   }
 });
 $("gateBack").addEventListener("click", ()=>{ showApp(); render(); });
-$("showSignin").addEventListener("click", ()=>{ $("signinForm").hidden = !$("signinForm").hidden; if(!$("signinForm").hidden) $("email").focus(); });
+$("showSignin").addEventListener("click", ()=>{ $("signinForm").hidden = !$("signinForm").hidden; if(!$("signinForm").hidden) $("pw").focus(); });
 $("signinForm").addEventListener("submit", async e=>{
   e.preventDefault(); if(!sb) return;
-  const email = $("email").value.trim().toLowerCase(), password = $("pw").value;
+  const email = ($("email").value || "connect@international-collective.com").trim().toLowerCase(), password = $("pw").value;
   const say = (t, bad) => { $("signinMsg").textContent = t; $("signinMsg").className = "msg" + (bad ? " err" : ""); };
-  if(!email || !password){ say("Enter your production email and password.", true); return; }
+  if(!password){ say("Enter the production password.", true); return; }
   say("Signing in…");
   const { error } = await sb.auth.signInWithPassword({ email, password });
-  if(error){ say(/invalid/i.test(error.message||"") ? "That email and password don't match." : "Couldn't sign in: "+error.message, true); return; }
+  if(error){ say(/invalid/i.test(error.message||"") ? "That password isn't right." : "Couldn't sign in: "+error.message, true); return; }
   $("pw").value=""; location.reload();
 });
 // Signed-in production can set a password so they don't need an email link every time.
@@ -202,7 +202,7 @@ function setPwForm(){
     h("button",{class:"btn sm",type:"submit"},"Save password"), h("span",{class:"msg",id:"pwMsg",role:"status"}));
   box.addEventListener("submit", async e=>{ e.preventDefault();
     const { error } = await sb.auth.updateUser({ password: $("newpw").value });
-    $("pwMsg").textContent = error ? "Couldn't save it: "+error.message : "Saved. Next time, sign in with your email and this password.";
+    $("pwMsg").textContent = error ? "Couldn't save it: "+error.message : "Saved. Next time, sign in with this password.";
     $("pwMsg").className = "msg"+(error?" err":""); if(!error) $("newpw").value=""; });
   return box;
 }

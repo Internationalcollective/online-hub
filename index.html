@@ -467,9 +467,8 @@ html,body{margin:0}
   </form>
   <div class="alt">Production team? <button class="linkbtn" type="button" id="showSignin">Sign in to edit</button></div>
   <form id="signinForm" hidden>
-    <label class="k" for="email">Your production email</label>
-    <input id="email" type="email" autocomplete="email" required>
-    <label class="k" for="pw">Password</label>
+    <input id="email" type="email" autocomplete="username" value="connect@international-collective.com" hidden>
+    <label class="k" for="pw">Production password</label>
     <input id="pw" type="password" autocomplete="current-password" required>
     <button class="btn" type="submit" id="signinBtn">Sign in</button>
     <span id="signinMsg" class="msg" role="status"></span>
@@ -493,7 +492,7 @@ html,body{margin:0}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=24"></script>
-<script src="app.js?v=24"></script>
+<script src="config.js?v=25"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>
