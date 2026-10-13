@@ -25,6 +25,8 @@ function rel(iso){
   if(n===0) return "Today"; if(n===1) return "Tomorrow"; if(n>1) return "In "+n+" days";
   if(n===-1) return "Yesterday"; return Math.abs(n)+" days ago";
 }
+// Phone numbers as tap-to-call links: "+44 (0)7747 797879" → tel:+447747797879
+const telHref = p => { let n=String(p||"").replace(/\(0\)/g,"").replace(/[^\d+]/g,""); return "tel:"+n; };
 const mapsUrl = loc => { const q=[loc&&loc.name, loc&&loc.address].filter(Boolean).join(", "); return q ? "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q) : ""; };
 // Descriptions: bullets only when the text is a list (one item per line).
 function descNode(text, cls){
@@ -32,13 +34,16 @@ function descNode(text, cls){
   return items.length>1 ? h("ul",{class:"list desc-list "+cls}, ...items.map(x=>h("li",null,x))) : h("span",{class:cls}, items[0]||"");
 }
 function factNode(k, v, loc){
-  const url = loc && loc!=="list" ? mapsUrl(loc) : "";
-  if(loc==="list" && !isTBC(v)){ const items=String(v).split(/\n+/).map(x=>x.trim()).filter(Boolean);
-    if(items.length<2) return h("div",{class:"fact"}, h("span",{class:"k"},k), h("span",{class:"v"}, items[0]||""));
-    return h("div",{class:"fact"}, h("span",{class:"k"},k), h("ul",{class:"list fact-list"}, ...items.map(x=>h("li",null,x)))); }
+  const isList = loc==="list" || !!(loc && loc.list);
+  const mapLoc = loc && loc!=="list" ? loc : null, url = mapLoc ? mapsUrl(mapLoc) : "";
+  const wrap = (...kids) => url
+    ? h("a",{class:"fact fact-link",href:url,target:"_blank",rel:"noopener","aria-label":"Open "+(mapLoc.name||"the location")+" in maps"}, ...kids, h("span",{class:"maplink"},"open in maps ↗"))
+    : h("div",{class:"fact"}, ...kids);
+  if(isList && !isTBC(v)){ const items=String(v).split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    if(items.length<2) return wrap(h("span",{class:"k"},k), h("span",{class:"v"}, items[0]||""));
+    return wrap(h("span",{class:"k"},k), h("ul",{class:"list fact-list"}, ...items.map(x=>h("li",null,x)))); }
   if(!url) return h("div",{class:"fact"}, h("span",{class:"k"},k), h("span",{class:"v"}, isTBC(v)? tbcNode(v) : v));
-  return h("a",{class:"fact fact-link",href:url,target:"_blank",rel:"noopener","aria-label":"Open "+(loc.name||"the location")+" in maps"},
-    h("span",{class:"k"},k), h("span",{class:"v"}, v), h("span",{class:"maplink"},"open in maps ↗"));
+  return wrap(h("span",{class:"k"},k), h("span",{class:"v"}, v));
 }
 // Countdown to the shoot (crew call on the shoot date) as a simple flip clock: days : hours : minutes : seconds.
 function callTarget(date, time){
@@ -243,7 +248,7 @@ function renderList(){
     grp(name, up, "Upcoming", b); grp(name, past, "Past", b);
   }
   const who = $("who"); who.replaceChildren();
-  if(S.admin) who.append(h("span",null,"Signed in as "+S.email), h("button",{class:"linkbtn",onclick:signOut},"Sign out"), h("button",{class:"linkbtn",onclick:()=>{ S.showPw=!S.showPw; renderList(); }}, S.showPw?"Hide password":"Set a password"), S.showPw ? (S.pwBox ||= setPwForm()) : null);
+  if(S.admin) who.append(h("span",null,"Signed in as "+S.email), h("button",{class:"linkbtn",onclick:signOut},"Sign out"), h("button",{class:"linkbtn",onclick:()=>{ S.showPw=!S.showPw; renderList(); }}, S.showPw?"Hide password":"Set a password"), ...(S.showPw ? [S.pwBox ||= setPwForm()] : []));
   who.append(h("button",{class:"linkbtn",onclick:()=>showGate("", true)},"Add another shoot's passcode"));
   if(!S.admin) who.append(h("button",{class:"linkbtn",onclick:()=>{ S.codes=[]; saveCodes(); showGate(); }},"Lock this device"));
 }
@@ -283,15 +288,16 @@ async function undoConfirm(sheet,p){
 function peopleTable(sheet, rows, key, cols, label){
   const cm = S.confirms.get(sheet.id) || new Map();
   const n = rows.filter(p=>cm.has(p.id)).length, pct = rows.length ? Math.round(n/rows.length*100) : 0;
-  const sec = h("section",{class:"sec"}, h("div",{class:"sec-h"}, h("h3",null,label), rows.length ? h("span",{class:"count"}, n+" of "+rows.length+" confirmed", h("span",{class:"bar"}, h("i",{style:"width:"+pct+"%"}))) : null));
+  const sec = h("section",{class:"sec"}, h("div",{class:"sec-h"}, h("h3",null,label), rows.length ? h("span",{class:"count"}, n+" of "+rows.length+" confirmed", h("span",{class:"bar"}, h("i",{style:"width:"+pct+"%"}))) : null,
+    S.inline ? h("button",{class:"btn sm ie-add",type:"button",onclick:()=>ieAdd(key,rows.length)},"+ Add person") : null));
   if(!rows.length){ sec.append(h("div",{class:"empty"},"No names added yet.")); return sec; }
   const tb = h("tbody");
   rows.forEach((p,i)=> tb.append(h("tr",null,
     E("td",null,`${key}.${i}.name`, tbcNode(p.name),{ph:"name"}),
     ...cols.map(c=> c.k==="call" ? E("td",{class:"time"},`${key}.${i}.call`, val(p.call,"—"),{ph:"call"}) : E("td",null,`${key}.${i}.${c.k}`, p[c.k]||"",{ph:c.l.toLowerCase()})),
-    h("td",{class:"cfc"}, confirmCell(sheet,p)))));
+    h("td",{class:"cfc"}, S.inline ? rowTools(key,i,"person") : confirmCell(sheet,p)))));
   sec.append(h("div",{class:"tbl"}, h("table",{class:"people"},
-    h("thead",null,h("tr",null,h("th",null,"Name"),...cols.map(c=>h("th",null,c.l)),h("th",{style:"text-align:right"},"Read & confirmed"))), tb)));
+    h("thead",null,h("tr",null,h("th",null,"Name"),...cols.map(c=>h("th",null,c.l)),h("th",{style:"text-align:right"},"Confirmed"))), tb)));
   return sec;
 }
 
@@ -340,13 +346,68 @@ function ieCommit(el, final){
   return inlineSave(d=>{ if(m && !v){ (d.notes||[]).splice(+m[1],1); } else setPath(d,path,v); }, sid)
     .then(ok=>{ ieDirty--; if(m && !v && ok && S.inline && S.sel===sid) renderSheet(); return ok; });
 }
+// Reorder by mouse: press and hold anywhere on a line (or grab its ⋮⋮ handle straight away), then move up or down and let go.
+function enableDrag(root){
+  const rowOf = el => el && el.closest && el.closest("tr[data-key], li[data-key], .contact[data-key]");
+  root.querySelectorAll(".row-tools[data-key]").forEach(t=>{
+    const row=t.closest("tr, li, .contact"); if(!row) return;
+    row.dataset.key=t.dataset.key; row.dataset.i=t.dataset.i;
+  });
+  let st=null; // {row,key,i,x,y,timer,on,target,after}
+  const clearMarks=()=>root.querySelectorAll(".drop-before,.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));
+  const lift=()=>{
+    if(!st) return; st.on=true;
+    if(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.path) document.activeElement.blur();
+    try{ window.getSelection().removeAllRanges(); }catch(_){}
+    st.row.classList.add("lifted"); document.body.classList.add("ie-dragging");
+  };
+  const end=(drop)=>{
+    if(!st) return; clearTimeout(st.timer);
+    const s0=st; st=null;
+    document.body.classList.remove("ie-dragging"); s0.row.classList.remove("lifted"); clearMarks(); stopScroll();
+    if(drop && s0.on && s0.target){
+      let to=+s0.target.dataset.i + (s0.after?1:0); if(s0.i < to) to--;
+      // swallow the click that follows the release
+      window.addEventListener("click", e=>{ e.stopPropagation(); e.preventDefault(); }, {capture:true, once:true});
+      if(to!==s0.i) ieMove(s0.key, s0.i, to);
+    }
+  };
+  let scrollRAF=null, scrollV=0;
+  const stopScroll=()=>{ cancelAnimationFrame(scrollRAF); scrollRAF=null; scrollV=0; };
+  const mark=()=>{ if(!st || !st.on) return;
+    const over=rowOf(document.elementFromPoint(st.px, st.py));
+    if(!over || over.dataset.key!==st.key) return;
+    const r=over.getBoundingClientRect(); clearMarks(); st.target=over; st.after=(st.py-r.top) > r.height/2;
+    over.classList.add(st.after ? "drop-after" : "drop-before"); };
+  const autoScroll=()=>{ if(!scrollV || !st){ scrollRAF=null; return; } window.scrollBy(0,scrollV); mark(); scrollRAF=requestAnimationFrame(autoScroll); };
+  root.addEventListener("pointerdown", e=>{
+    if(e.button!==0 || e.pointerType==="touch") return;
+    const row=rowOf(e.target); if(!row || !root.contains(row)) return;
+    if(e.target.closest("button, select, input, .row-tools.ask")) return;
+    const onHandle=!!e.target.closest(".rt-drag");
+    st={row,key:row.dataset.key,i:+row.dataset.i,x:e.clientX,y:e.clientY,on:false,target:null,after:false};
+    if(onHandle){ e.preventDefault(); lift(); }
+    else st.timer=setTimeout(lift, 380);
+  });
+  const H = window.__ieDragH || {}; for(const [k,f] of Object.entries(H)) window.removeEventListener(k,f,true);
+  const onMove = e=>{
+    if(!st) return;
+    if(!st.on){ if(Math.hypot(e.clientX-st.x, e.clientY-st.y) > 6){ clearTimeout(st.timer); st=null; } return; }
+    e.preventDefault();
+    st.px=e.clientX; st.py=e.clientY; mark();
+    const edge=60; scrollV = e.clientY < edge ? -12 : (e.clientY > innerHeight-edge ? 12 : 0);
+    if(scrollV && !scrollRAF) scrollRAF=requestAnimationFrame(autoScroll);
+  };
+  window.__ieDragH = { pointermove:onMove, pointerup:()=>end(true), pointercancel:()=>end(false), keydown:e=>{ if(e.key==="Escape" && st && st.on) end(false); } };
+  for(const [k,f] of Object.entries(window.__ieDragH)) window.addEventListener(k,f,true);
+}
 function enableInline(root){
   root.querySelectorAll("[data-path]").forEach(el=>{
     el.contentEditable="plaintext-only"; if(el.contentEditable!=="plaintext-only") el.contentEditable="true";
     el.spellcheck=true; el.dataset.sheet=S.sel;
     el.addEventListener("click", e=>e.stopPropagation());
     el.addEventListener("keydown", e=>{
-      if(e.key==="Escape"){ clearTimeout(el._t); el._t=null; el.textContent = String(getPath(S.sheets.get(S.sel)||{}, el.dataset.path) ?? ""); el.blur(); }
+      if(e.key==="Escape"){ clearTimeout(el._t); el._t=null; el.textContent = String(getPath(S.sheets.get(S.sel)||{}, el.dataset.path) ?? ""); ieState(""); el.blur(); }
       else if(e.key==="Enter" && !el.dataset.multi){ e.preventDefault(); el.blur(); }
     });
     // Save a moment after typing stops, and again when leaving the field.
@@ -363,7 +424,58 @@ async function toggleInline(){
     await Promise.all(els.map(el=>ieCommit(el,true)));
     await ieQueue;
   }
-  S.inline=!S.inline; S.reissueAsk=false; render(); if(!S.inline) refresh();
+  S.inline=!S.inline; S.reissueAsk=false; S.delRow=null; render(); if(!S.inline) refresh();
+}
+
+// Adding and removing lines while editing on the page.
+const NEW_ROW = { schedule:()=>({start:"",end:"",title:"",detail:"",who:"",kind:""}), crew:()=>({id:"p"+rid(),name:"",role:"",call:"",base:""}),
+  cast:()=>({id:"p"+rid(),name:"",role:"",call:""}), contacts:()=>({name:"",role:"",phone:"",email:""}), open:()=>({item:"",detail:"",owner:""}), notes:()=>"" };
+const FIRST_FIELD = { schedule:"title", crew:"name", cast:"name", contacts:"name", open:"item" };
+async function ieFlush(){
+  if(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.path) document.activeElement.blur();
+  await Promise.all([...document.querySelectorAll("[data-path]")].map(el=>ieCommit(el,true)));
+  await ieQueue;
+}
+async function ieStructure(fn, focusPath){
+  await ieFlush();
+  if(await inlineSave(fn)){ S.ieFocus = focusPath || null; S.delRow = null; renderSheet(); }
+}
+function ieAdd(key, at){
+  return ieStructure(d=>{ d[key] = d[key]||[]; d[key].splice(at,0,NEW_ROW[key]()); }, key+"."+at+(FIRST_FIELD[key]?"."+FIRST_FIELD[key]:""));
+}
+function ieRemove(key, i){
+  return ieStructure(d=>{ (d[key]||[]).splice(i,1); });
+}
+function ieMove(key, from, to){
+  const n=(getPath(S.sheets.get(S.sel)||{},key)||[]).length;
+  if(to<0 || to>=n || from===to) return;
+  S.ieMoved = key+"."+to;
+  return ieStructure(d=>{ const a=d[key]; const [x]=a.splice(from,1); a.splice(to,0,x); });
+}
+// Running order: sort by start time. Lines without a time stay with the line above them.
+function ieSortByTime(){
+  const mins = t => { const m=/(\d{1,2})[:.](\d{2})/.exec(t||""); return m ? (+m[1])*60 + (+m[2]) : null; };
+  return ieStructure(d=>{ let last=-1; const rows=(d.schedule||[]).map((r,i)=>{ const m=mins(r.start); if(m!=null) last=m; return {r,i,k:last}; });
+    rows.sort((a,b)=> a.k-b.k || a.i-b.i); d.schedule=rows.map(x=>x.r); });
+}
+function rowTools(key, i, noun, extra){
+  if(!S.inline) return null;
+  const id = key+"."+i;
+  if(S.delRow===id) return h("span",{class:"row-tools ask"}, "Remove this "+noun+"?",
+    h("button",{class:"btn sm danger",type:"button",onclick:()=>ieRemove(key,i)},"Remove"),
+    h("button",{class:"btn sm",type:"button",onclick:()=>{ S.delRow=null; renderSheet(); }},"Keep"));
+  const n=(getPath(S.sheets.get(S.sel)||{},key)||[]).length;
+  return h("span",{class:"row-tools","data-key":key,"data-i":i}, extra||null,
+    h("span",{class:"rt rt-drag",title:"Drag to move","aria-hidden":"true"},"⋮⋮"),
+    h("button",{class:"rt",type:"button",title:"Move up","aria-label":"Move this "+noun+" up",disabled:i===0,onclick:()=>ieMove(key,i,i-1)},"↑"),
+    h("button",{class:"rt",type:"button",title:"Move down","aria-label":"Move this "+noun+" down",disabled:i>=n-1,onclick:()=>ieMove(key,i,i+1)},"↓"),
+    h("button",{class:"rt",type:"button",title:"Add a "+noun+" below","aria-label":"Add a "+noun+" below",onclick:()=>ieAdd(key,i+1)},"+"),
+    h("button",{class:"rt",type:"button",title:"Remove this "+noun,"aria-label":"Remove this "+noun,onclick:async()=>{ await ieFlush(); S.delRow=id; renderSheet(); }},"×"));
+}
+function kindPicker(r, i){
+  const sel = h("select",{class:"rt-kind","aria-label":"Type of line",onchange:e=>ieStructure(d=>{ d.schedule[i].kind=e.target.value; })},
+    ...KINDS.map(([v,t])=>{ const o=h("option",{value:v},t); if((r.kind||"")===v) o.selected=true; return o; }));
+  return sel;
 }
 
 function renderSheet(){
@@ -412,33 +524,41 @@ function renderSheet(){
   if(flashMsg) sheet.append(h("div",{class:"banner"},flashMsg));
   if(S.inline) sheet.append(h("div",{class:"banner ie-help"},"Click any text to change it. It saves when you click away (Enter for a new line in lists and notes, Esc to cancel). Crew aren't asked to reconfirm unless you press Re-issue. Add or remove rows, dates and brand in the Full editor."));
   const locFact = [loc.label||"Location",[loc.name,loc.address].filter(Boolean).join("\n"),loc];
+  // Nearest underground opens the station (first line of the list) in Google Maps.
+  const tubeLoc = s.tube && !isTBC(s.tube) ? {list:true, name: String(s.tube).split(/\n/)[0].trim().replace(/\s*(underground\s*)?station$/i,"")+" station", address:"London"} : "list";
   const hospLoc = s.hospital && !isTBC(s.hospital) ? {name: s.hospitalMaps || String(s.hospital).split(/\n| · /)[0]} : null;
   const loc2 = s.location2||{}, has2 = !!(loc2.name||loc2.address);
   const loc2Fact = has2 ? [[loc2.label||"Studio location",[loc2.name,loc2.address].filter(Boolean).join("\n"),loc2]] : [];
   const facts = ozf
-    ? [locFact,...loc2Fact,["Nearest underground",s.tube,"list"],["Nearest A&E",s.hospital,hospLoc],["Weather",s.weather,"list"],["Parking & access",s.parking,"list"]]
-    : [locFact,...loc2Fact,["Venue hours",s.hours],["Sunset",s.sunset],["Weather",s.weather],["Nearest A&E",s.hospital,hospLoc],["Parking & access",s.parking]];
-  const contactsSec = (s.contacts||[]).length ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Key contacts")),
-    h("div",{class:"contacts"}, ...s.contacts.map((c,i)=>h("div",{class:"contact"}, E("b",null,`contacts.${i}.name`,c.name||"TBC",{ph:"name"}), E("span",{class:"r"},`contacts.${i}.role`,c.role||"",{ph:"role"}), (c.phone||S.inline)?E("span",{class:"n"},`contacts.${i}.phone`,c.phone,{ph:"phone"}):null, (c.email||S.inline)?E("span",{class:"n"},`contacts.${i}.email`,c.email,{ph:"email"}):null)))) : null;
+    ? [locFact,...loc2Fact,["Nearest underground",s.tube,tubeLoc],["Nearest A&E",s.hospital,hospLoc]]
+    : [locFact,...loc2Fact,["Venue hours",s.hours],["Sunset",s.sunset],["Nearest A&E",s.hospital,hospLoc]];
+  const addBtn = (key,label) => S.inline ? h("button",{class:"btn sm ie-add",type:"button",onclick:()=>ieAdd(key,(s[key]||[]).length)},"+ "+label) : null;
+  const contactsSec = ((s.contacts||[]).length || S.inline) ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Key contacts"), addBtn("contacts","Add contact")),
+    h("div",{class:"contacts"}, ...(s.contacts||[]).map((c,i)=>h("div",{class:"contact"}, E("b",null,`contacts.${i}.name`,c.name||"TBC",{ph:"name"}), E("span",{class:"r"},`contacts.${i}.role`,c.role||"",{ph:"role"}), (c.phone||S.inline)? (S.inline ? E("span",{class:"n"},`contacts.${i}.phone`,c.phone,{ph:"phone"}) : h("a",{class:"n tel",href:telHref(c.phone),"aria-label":"Call "+(c.name||"")},c.phone)):null,
+    (c.email||S.inline)? (S.inline ? E("span",{class:"n"},`contacts.${i}.email`,c.email,{ph:"email"}) : h("a",{class:"n mail",href:"mailto:"+String(c.email).trim(),"aria-label":"Email "+(c.name||"")},c.email)):null, rowTools("contacts",i,"contact"))))) : null;
   let schedSec = null;
-  if((s.schedule||[]).length){
+  if((s.schedule||[]).length || S.inline){
     const tb=h("tbody");
-    s.schedule.forEach((r,i)=>{ const P=`schedule.${i}.`; tb.append(h("tr",{class:r.kind||""},
+    (s.schedule||[]).forEach((r,i)=>{ const P=`schedule.${i}.`; tb.append(h("tr",{class:r.kind||""},
       S.inline ? h("td",{class:"time"}, E("span",{class:"t0"},P+"start","",{ph:"start"}), h("span",{class:"t1"}," – "), E("span",{class:"t1"},P+"end","",{ph:"end"}))
         : h("td",{class:"time"}, h("span",{class:"t0"},r.start||""), r.end? h("span",{class:"t1"}," – "+r.end):null),
       (()=>{ const dur = !S.inline && ozf && isDuration(r.detail) ? r.detail : "";
         if(S.inline) return h("td",null, h("div",{class:"line"}, E("strong",null,P+"title","",{ph:"item"})),
-          E("span",{class:"d"},P+"detail","",{ph:"detail / run time (one per line for a list)",multi:true}), E("span",{class:"who"},P+"who","",{ph:"who"}));
-        return h("td",null, h("div",{class:"line"}, dur ? h("span",{class:"dur"},dur) : null, h("strong",null,r.title||"")),
+          E("span",{class:"d"},P+"detail","",{ph:"detail / run time (one per line for a list)",multi:true}), E("span",{class:"who"},P+"who","",{ph:"who"}),
+          rowTools("schedule",i,"line",kindPicker(r,i)));
+        // Estimated run times (e.g. "30 min") are not shown on the sheet (Dean, 13 Oct).
+        return h("td",null, h("div",{class:"line"}, h("strong",null,r.title||"")),
           r.detail && !dur ? descNode(r.detail,"d") : null, r.who? h("span",{class:"who"},r.who):null); })())); });
-    schedSec = h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Running order"), ozf ? h("span",{class:"count"}, s.schedule.length+" items") : null), h("div",{class:"tbl"},h("table",{class:"sched"},tb)));
+    schedSec = h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Running order"), ozf ? h("span",{class:"count"}, (s.schedule||[]).length+" items") : null, S.inline && (s.schedule||[]).length>1 ? h("button",{class:"btn sm ie-add",type:"button",title:"Put the lines in order of start time",onclick:ieSortByTime},"Sort by time") : null, addBtn("schedule","Add line")),
+      (s.schedule||[]).length ? h("div",{class:"tbl"},h("table",{class:"sched"},tb)) : h("div",{class:"empty"},"Nothing here yet."));
   }
-  const notesSec = (s.notes||[]).length ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Notes")), h("ul",{class:"list"}, ...s.notes.map((n,i)=>E("li",null,`notes.${i}`,n,{ph:"note (clear it to remove)"})))) : null;
-  const openSec = (s.open||[]).length ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Still to confirm"),h("span",{class:"count"},s.open.length+" open")),
-    h("div",{class:"tbl"},h("table",{class:"open"}, h("thead",null,h("tr",null,h("th",null,"Item"),h("th",null,"Detail"),h("th",null,"Owner"))),
-      h("tbody",null, ...s.open.map((o,i)=>h("tr",null,E("td",null,`open.${i}.item`,o.item||"",{ph:"item"}),E("td",null,`open.${i}.detail`,o.detail||"",{ph:"detail"}),E("td",null,`open.${i}.owner`,o.owner||"",{ph:"owner"}))))))) : null;
+  const notesSec = ((s.notes||[]).length || S.inline) ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Notes"), addBtn("notes","Add note")),
+    h("ul",{class:"list"}, ...(s.notes||[]).map((n,i)=> S.inline ? h("li",null, E("span",{class:"ie-note"},`notes.${i}`,n,{ph:"note"}), rowTools("notes",i,"note")) : h("li",null,n)))) : null;
+  const openSec = ((s.open||[]).length || S.inline) ? h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Still to confirm"),h("span",{class:"count"},(s.open||[]).length+" open"), addBtn("open","Add item")),
+    h("div",{class:"tbl"},h("table",{class:"open"}, h("thead",null,h("tr",null,h("th",null,"Item"),h("th",null,"Detail"),h("th",null,"Owner"), S.inline?h("th"):null)),
+      h("tbody",null, ...(s.open||[]).map((o,i)=>h("tr",null,E("td",null,`open.${i}.item`,o.item||"",{ph:"item"}),E("td",null,`open.${i}.detail`,o.detail||"",{ph:"detail"}),E("td",null,`open.${i}.owner`,o.owner||"",{ph:"owner"}), S.inline?h("td",{class:"tools-td"},rowTools("open",i,"item")):null)))))) : null;
   const crewSec = peopleTable(s, s.crew||[], "crew", [{k:"role",l:"Role"},{k:"call",l:"Call"},{k:"base",l:"Base"}], "Crew");
-  const castSec = peopleTable(s, s.cast||[], "cast", [{k:"role",l:"Role / wave"},{k:"call",l:"Call"},{k:"notes",l:"Notes"}], "Cast & talent");
+  const castSec = peopleTable(s, s.cast||[], "cast", [{k:"role",l:"Role"},{k:"call",l:"Call"}], "Cast & talent");
   if(S.inline){
     const F=(k,paths,o={})=>h("div",{class:"fact"}, o.kpath ? E("span",{class:"k"},o.kpath,k,{ph:k}) : h("span",{class:"k"},k),
       ...paths.map(([p,ph])=>E("span",{class:"v ie-line"},p,"",{ph,multi:o.multi})));
@@ -446,26 +566,29 @@ function renderSheet(){
     if(has2) L.push(F(loc2.label||"Studio location",[["location2.name","venue"],["location2.address","address"]],{kpath:"location2.label"}));
     if(!ozf) L.push(F("Venue hours",[["hours","08:00–18:00"]]), F("Sunset",[["sunset","≈ 16:10"]]));
     if(ozf) L.push(F("Nearest underground",[["tube","one point per line"]],{multi:true}));
-    L.push(F("Nearest A&E",[["hospital","hospital, road, area"]]), F("Weather",[["weather","weather"]],{multi:true}), F("Parking & access",[["parking","parking & access"]],{multi:true}));
+    L.push(F("Nearest A&E",[["hospital","hospital, road, area"]]));
     sheet.append(h("div",{class:"facts"}, ...L));
     sheet.append(h("div",{class:"dayline"}, E("p",null,"location.notes","",{ph:"location / day notes",multi:true})));
-    for(const x of (ozf ? [schedSec, castSec, crewSec, notesSec, contactsSec, openSec] : [contactsSec, schedSec, crewSec, castSec, notesSec, openSec])) if(x) sheet.append(x);
+    for(const x of (ozf ? [schedSec, castSec, crewSec, contactsSec] : [contactsSec, schedSec, crewSec, castSec])) if(x) sheet.append(x);
   } else if(ozf){
     // Only facts that are filled in; anything still TBC is listed once, quietly.
     const filled = facts.filter(([,v])=>!isTBC(v)), tbc = facts.filter(([,v])=>isTBC(v)).map(([k])=>k.toLowerCase());
     sheet.append(h("div",{class:"facts"}, ...filled.map(([k,v,l])=>factNode(k,v,l))));
-    if(loc.notes || tbc.length) sheet.append(h("div",{class:"dayline"},
+    if(loc.notes) sheet.append(h("div",{class:"dayline"},
       loc.notes ? h("p",null, loc.notes) : null,
-      tbc.length ? h("p",{class:"tbcline"}, "still to confirm: "+tbc.join(", ")) : null));
-    for(const x of [schedSec, castSec, crewSec, notesSec, contactsSec, openSec]) if(x) sheet.append(x);
+      null));
+    for(const x of [schedSec, castSec, crewSec, contactsSec]) if(x) sheet.append(x);
   } else {
     sheet.append(h("div",{class:"facts"}, ...facts.map(([k,v,l])=>isTBC(v) ? h("div",{class:"fact"},h("span",{class:"k"},k), h("span",{class:"v"},tbcNode(v))) : factNode(k,v,l))));
     if(loc.notes) sheet.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Location notes")), h("p",{style:"margin:0;white-space:pre-line"},loc.notes)));
-    for(const x of [contactsSec, schedSec, crewSec, castSec, notesSec, openSec]) if(x) sheet.append(x);
+    for(const x of [contactsSec, schedSec, crewSec, castSec]) if(x) sheet.append(x);
   }
   sheet.append(h("div",{class:"foot"}, h("span",null,"Version "+(s.version||1)), s.updated? h("span",null,"Updated "+fmtStamp(s.updated)) : null, h("span",null,"Tap Confirm next to your name once you've read your call time")));
   main.append(sheet);
-  if(S.inline) enableInline(sheet);
+  if(S.inline){ enableInline(sheet); enableDrag(sheet);
+    if(S.ieMoved){ const t=sheet.querySelector('.row-tools[data-key="'+S.ieMoved.split(".")[0]+'"][data-i="'+S.ieMoved.split(".")[1]+'"]'); S.ieMoved=null;
+      const row=t && t.closest("tr, li, .contact"); if(row){ row.scrollIntoView({block:"nearest"}); row.classList.add("just-moved"); setTimeout(()=>row.classList.remove("just-moved"),900); } }
+    if(S.ieFocus){ const f=sheet.querySelector('[data-path="'+S.ieFocus+'"]'); S.ieFocus=null; if(f){ f.scrollIntoView({block:"center"}); f.focus(); } } }
   else if(ozf) setupReveal(sheet);
 }
 // Fade content up as it scrolls into view (only what starts below the fold; skipped for reduced motion).
@@ -496,7 +619,7 @@ const LISTS = {
   contacts:{label:"Key contacts", cols:[["name","Name","1.2fr"],["role","Role","1fr"],["phone","Phone","1fr"],["email","Email","1.3fr"]]},
   schedule:{label:"Running order", cols:[["start","Start","80px"],["end","End","80px"],["title","Item","1.4fr"],["detail","Detail","2fr"],["who","Who","1fr"],["kind","Type","110px"]]},
   crew:{label:"Crew", cols:[["name","Name","1.3fr"],["role","Role","1.3fr"],["call","Call","80px"],["base","Base","1fr"]], person:true},
-  cast:{label:"Cast & talent", cols:[["name","Name","1.3fr"],["role","Role / wave","1.2fr"],["call","Call","80px"],["notes","Notes","1.3fr"]], person:true},
+  cast:{label:"Cast & talent", cols:[["name","Name","1.3fr"],["role","Role","1.2fr"],["call","Call","80px"]], person:true},
   open:{label:"Still to confirm", cols:[["item","Item","1fr"],["detail","Detail","2fr"],["owner","Owner","1fr"]]}
 };
 const KINDS=[["","Standard"],["shoot","Shooting"],["call","Call time"],["meal","Break / meal"]];
@@ -552,14 +675,11 @@ function renderEditor(){
       field(d,"date","Date",{type:"date"}), field(d,"dayOf","Day",{ph:"Day 1 of 2"}),
       field(d,"status","Status",{options:[["draft","Draft"],["issued","Issued"],["wrapped","Wrapped"]]}),
       field(d,"crewCall","General crew call",{ph:"08:00"}), field(d,"hours","Venue hours",{ph:"08:00–18:00"}), field(d,"sunset","Sunset",{ph:"≈ 16:10"}),
-      field(d,"weather","Weather"), field(d,"tube","Nearest underground (one point per line)",{area:true}), field(d,"hospital","Nearest A&E"), field(d,"parking","Parking & access"))));
+      field(d,"tube","Nearest underground (one point per line)",{area:true}), field(d,"hospital","Nearest A&E"))));
   wrap.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Location")),
     h("div",{class:"fgrid"}, field(d,"location.label","Location label",{ph:"Location"}), field(d,"location.name","Venue"), field(d,"location.address","Address"), field(d,"location.notes","Location notes",{area:true,wide:true}),
       field(d,"location2.label","Second location label",{ph:"Studio location"}), field(d,"location2.name","Second location"), field(d,"location2.address","Second location address"))));
   for(const k of ["contacts","schedule","crew","cast"]) wrap.append(listEditor(d,k));
-  const notesArea=h("textarea",{id:"e-notes",oninput:e=>{d.notes=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);}}); notesArea.value=(d.notes||[]).join("\n");
-  wrap.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Notes")), h("div",{class:"f"}, h("label",{for:"e-notes"},"One note per line"), notesArea)));
-  wrap.append(listEditor(d,"open"));
   wrap.append(h("div",{class:"actions"}, h("button",{class:"btn primary",onclick:save},"Save call sheet"), h("button",{class:"btn",onclick:cancel},"Cancel")));
   return wrap;
 }

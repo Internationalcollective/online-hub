@@ -167,6 +167,34 @@ span.ie.ie-line,span.ie.d,span.ie.who{display:block}
 .ie-state.ok{color:var(--ink)}
 .ie-state.err{color:var(--danger)}
 .banner.ie-help{font-size:12.5px;line-height:1.5}
+.row-tools{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;font-size:12px;color:var(--ink);text-transform:none;letter-spacing:0}
+.row-tools .rt{width:26px;height:26px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:15px;line-height:1;padding:0;cursor:pointer;border-radius:2px}
+.row-tools .rt:hover{border-color:var(--ink)}
+.row-tools .rt-kind{height:26px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:12px;padding:0 4px}
+.row-tools.ask{gap:8px}
+.ie-add{margin-left:auto}
+.sec-h .count + .ie-add{margin-left:12px}
+.contact .row-tools,.people .row-tools{justify-content:flex-end}
+td.tools-td{width:1%;white-space:nowrap}
+ul.list li .row-tools{display:inline-flex;margin:0 0 0 10px;vertical-align:middle}
+.ie-note{display:inline}
+.row-tools .rt:disabled{opacity:.3;cursor:default}
+.row-tools .rt-drag{display:inline-flex;align-items:center;justify-content:center;cursor:grab;font-size:12px;letter-spacing:-2px;user-select:none}
+@media (hover:none){ .row-tools .rt-drag{display:none} }
+.dragging{opacity:.4}
+.drop-before{box-shadow:inset 0 2px 0 var(--ink)}
+.drop-after{box-shadow:inset 0 -2px 0 var(--ink)}
+.just-moved,.just-moved td{background:#F4F5F7 !important;transition:background .9s}
+.sec-h .ie-add + .ie-add{margin-left:8px}
+body.ie-dragging, body.ie-dragging *{user-select:none !important;-webkit-user-select:none !important;cursor:grabbing !important}
+.lifted, .lifted td{background:#F4F5F7 !important;opacity:.75}
+tr.drop-before td{box-shadow:inset 0 3px 0 var(--ink)}
+tr.drop-after td{box-shadow:inset 0 -3px 0 var(--ink)}
+.ozf .sched tr[data-key] td, .people tr[data-key] td, li[data-key], .contact[data-key]{cursor:default}
+.row-tools .rt-drag{cursor:grab}
+
+
+
 
 .x:hover{color:var(--danger)}
 .err{color:var(--danger);font-size:13px}
@@ -318,6 +346,10 @@ textarea.cell-area{min-height:0;height:auto;resize:vertical;font:inherit}
 .fact-link .v{text-decoration:underline;text-decoration-color:var(--grey1);text-underline-offset:4px}
 .fact-link .maplink{font-family:var(--head);font-size:10px;letter-spacing:.24em;text-transform:lowercase;color:var(--ink);margin-top:6px;opacity:.85}
 .fact-link:hover .v{text-decoration-color:currentColor}
+.contact a.n{user-select:auto;display:block;color:inherit;text-decoration:underline;text-decoration-color:var(--grey1);text-underline-offset:3px;width:fit-content}
+.contact a.n:hover{text-decoration-color:currentColor}
+.fact-link .fact-list li{text-decoration:underline;text-decoration-color:var(--grey1);text-underline-offset:4px}
+.fact-link:hover .fact-list li{text-decoration-color:currentColor}
 .fact-link:focus-visible{outline:1.5px solid var(--ink);outline-offset:-4px}
 @media (prefers-reduced-motion:reduce){.ozf *{transition:none!important}}
 
@@ -492,7 +524,7 @@ html,body{margin:0}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=25"></script>
-<script src="app.js?v=25"></script>
+<script src="config.js?v=34"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>
