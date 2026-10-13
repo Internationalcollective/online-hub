@@ -264,7 +264,8 @@ function confirmCell(sheet, p){
   const wrap = h("div",{class:"cf"});
   if(c){
     const stale = (c.version||1) < (sheet.version||1);
-    wrap.append(h("div",null, h("span",{class:"ok"},"Confirmed"), h("small",null, stale ? h("span",{class:"old"},"on v"+(c.version||1)+" · ") : null, fmtStamp(c.at))));
+    const pop = S.justConfirmed === sheet.id+"|"+p.id;
+    wrap.append(h("div",null, h("span",{class:"ok"+(pop?" pop":"")},"Confirmed"), h("small",null, stale ? h("span",{class:"old"},"on v"+(c.version||1)+" · ") : null, fmtStamp(c.at))));
     if(stale) wrap.append(h("button",{class:"btn sm",onclick:()=>doConfirm(sheet,p)},"Reconfirm"));
     const key = sheet.id+"|"+p.id;
     if(S.undoAsk===key) wrap.append(h("span",{class:"undo-ask"}, "Undo "+(firstName(p.name))+"'s confirmation?",
@@ -277,7 +278,7 @@ function confirmCell(sheet, p){
 async function doConfirm(sheet,p){
   const { error } = await sb.rpc("hub_confirm", { p_codes:S.codes, p_sheet:sheet.id, p_person:p.id });
   if(error){ flash(/no_person|no_sheet/.test(error.message||"") ? "This call sheet changed. Reload and try again." : "Couldn't save the confirmation. Try again."); return; }
-  await refresh();
+  S.justConfirmed = sheet.id+"|"+p.id; await refresh(); setTimeout(()=>{ S.justConfirmed=null; }, 1500);
 }
 const firstName = n => (String(n||"").trim().split(/\s+/)[0]) || "this";
 async function undoConfirm(sheet,p){
@@ -299,6 +300,45 @@ function peopleTable(sheet, rows, key, cols, label){
   sec.append(h("div",{class:"tbl"}, h("table",{class:"people"},
     h("thead",null,h("tr",null,h("th",null,"Name"),...cols.map(c=>h("th",null,c.l)),h("th",{style:"text-align:right"},"Confirmed"))), tb)));
   return sec;
+}
+
+// Talent call: the sheet's own value, otherwise the earliest call time in Cast & talent.
+function talentCall(s){
+  if(s.talentCall && String(s.talentCall).trim()) return String(s.talentCall).trim();
+  const t=(s.cast||[]).map(p=>/(\d{1,2})[:.](\d{2})/.exec(p.call||"")).filter(Boolean).map(m=>m[1].padStart(2,"0")+":"+m[2]).sort();
+  return t[0]||"";
+}
+/* ---------- motion ---------- */
+// Title letters rise in one after another (screen readers get the whole title).
+function splitTitle(t){
+  let i=0;
+  return h("h2",{class:"split","aria-label":t}, ...String(t).split(/(\s+)/).filter(Boolean).map(w => /^\s+$/.test(w) ? " " :
+    h("span",{class:"w","aria-hidden":"true"}, ...[...w].map(c=>h("span",{class:"ch",style:"--i:"+(i++)},c)))));
+}
+// A thin slate line across the top of the window shows how far down the call sheet you are.
+const readBar = (()=>{ const el=document.createElement("div"); el.id="readbar"; el.setAttribute("aria-hidden","true"); document.body.append(el);
+  const upd=()=>{ const on=!!document.querySelector(".sheet.ozf:not(.editing)"); el.classList.toggle("on",on); if(!on) return;
+    const max=document.documentElement.scrollHeight-innerHeight; el.style.transform="scaleX("+(max>0?Math.min(1,scrollY/max):0)+")"; };
+  addEventListener("scroll",upd,{passive:true}); addEventListener("resize",upd); return upd; })();
+
+/* ---------- links (e.g. the Canva deck) ---------- */
+const linkMark = () => { const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox","0 0 24 24"); svg.setAttribute("class","lk-mark"); svg.setAttribute("aria-hidden","true");
+  [["ring r1",10.6],["ring r2",6.4],["dot",2.3],["ripple",10.6]].forEach(([c,r])=>{ const e=document.createElementNS(ns,"circle"); e.setAttribute("cx","12"); e.setAttribute("cy","12"); e.setAttribute("r",String(r)); e.setAttribute("class",c); svg.append(e); });
+  return svg; };
+const hostOf = u => { try{ const h0=new URL(u).hostname.replace(/^www\./,""); return /canva/.test(h0) ? "view in canva" : "open "+h0; }catch(e){ return "open link"; } };
+function linksBlock(s){
+  const all = s.links||[];
+  if(S.inline) return h("div",{class:"links"},
+    ...all.map((l,i)=>h("div",{class:"link-card ie-link"}, linkMark(),
+      h("span",{class:"lk-txt"}, E("span",{class:"lk-label"},`links.${i}.label`,"",{ph:"link name, e.g. campaign shoot deck"}), E("span",{class:"lk-sub"},`links.${i}.url`,"",{ph:"https://…"})),
+      rowTools("links",i,"link"))),
+    h("div",{class:"links-add"}, h("button",{class:"btn sm ie-add",type:"button",onclick:()=>ieAdd("links",all.length)},"+ Add link")));
+  const L = all.filter(l=>l && /^https?:\/\//i.test(String(l.url||"").trim()));
+  if(!L.length) return null;
+  return h("div",{class:"links"}, ...L.map((l,i)=>h("a",{class:"link-card",href:String(l.url).trim(),target:"_blank",rel:"noopener",style:"--n:"+i},
+    linkMark(), h("span",{class:"lk-txt"}, h("span",{class:"lk-label"}, l.label||"open link"), h("span",{class:"lk-sub"}, l.sub || hostOf(l.url))),
+    h("span",{class:"lk-arrow","aria-hidden":"true"},"→"))));
 }
 
 /* ---------- edit on page (production only) ---------- */
@@ -429,8 +469,8 @@ async function toggleInline(){
 
 // Adding and removing lines while editing on the page.
 const NEW_ROW = { schedule:()=>({start:"",end:"",title:"",detail:"",who:"",kind:""}), crew:()=>({id:"p"+rid(),name:"",role:"",call:"",base:""}),
-  cast:()=>({id:"p"+rid(),name:"",role:"",call:""}), contacts:()=>({name:"",role:"",phone:"",email:""}), open:()=>({item:"",detail:"",owner:""}), notes:()=>"" };
-const FIRST_FIELD = { schedule:"title", crew:"name", cast:"name", contacts:"name", open:"item" };
+  cast:()=>({id:"p"+rid(),name:"",role:"",call:""}), contacts:()=>({name:"",role:"",phone:"",email:""}), links:()=>({label:"",url:""}), open:()=>({item:"",detail:"",owner:""}), notes:()=>"" };
+const FIRST_FIELD = { links:"label", schedule:"title", crew:"name", cast:"name", contacts:"name", open:"item" };
 async function ieFlush(){
   if(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.path) document.activeElement.blur();
   await Promise.all([...document.querySelectorAll("[data-path]")].map(el=>ieCommit(el,true)));
@@ -487,14 +527,17 @@ function renderSheet(){
   const s = {id:S.sel, ...raw}, loc = s.location||{};
   const bid = S.brandOf.get(s.id)||"";
   const ozf = bid==="onezerofive";
-  const sheet = h("article",{class:"sheet"+(bid?" b-"+bid:"")+(ozf?" ozf":"")});
+  const sheet = h("article",{class:"sheet"+(bid?" b-"+bid:"")+(ozf?" ozf":"")+(S.inline?" editing":"")+(S.introDone===S.sel?"":" intro")});
+  S.introDone = S.sel;
   if(ozf){
     sheet.append(h("div",{class:"sheet-top ozf-top"},
       h("div",{class:"ozf-left"},
         h("div",{class:"kicker"}, h("span",{class:"cs"},"onezerofive"), statusChip(s.status)),
-        E("h2",null,"title", (s.title||s.project||"call sheet").toLowerCase(),{ph:"title"}),
+        S.inline ? E("h2",null,"title", (s.title||s.project||"call sheet").toLowerCase(),{ph:"title"}) : splitTitle((s.title||s.project||"call sheet").toLowerCase()),
         h("p",{class:"sub"}, "call sheet"),
-        h("div",{class:"crewcall"}, h("span",{class:"k"},"crew call"), E("b",null,"crewCall", val(s.crewCall,"tbc"),{ph:"08:00"}))),
+        h("div",{class:"calls"},
+          h("div",{class:"crewcall"}, h("span",{class:"k"},"crew call"), E("b",null,"crewCall", val(s.crewCall,"tbc"),{ph:"08:00"})),
+          (talentCall(s)||S.inline) ? h("div",{class:"crewcall talentcall"}, h("span",{class:"k"},"talent call"), E("b",null,"talentCall", talentCall(s),{ph:"auto: earliest cast call"})) : null)),
       h("div",{class:"ozf-right"},
         countdownClock(s.date, s.crewCall),
         h("p",{class:"when"}, fmtLong(s.date).toLowerCase()),
@@ -559,6 +602,7 @@ function renderSheet(){
       h("tbody",null, ...(s.open||[]).map((o,i)=>h("tr",null,E("td",null,`open.${i}.item`,o.item||"",{ph:"item"}),E("td",null,`open.${i}.detail`,o.detail||"",{ph:"detail"}),E("td",null,`open.${i}.owner`,o.owner||"",{ph:"owner"}), S.inline?h("td",{class:"tools-td"},rowTools("open",i,"item")):null)))))) : null;
   const crewSec = peopleTable(s, s.crew||[], "crew", [{k:"role",l:"Role"},{k:"call",l:"Call"},{k:"base",l:"Base"}], "Crew");
   const castSec = peopleTable(s, s.cast||[], "cast", [{k:"role",l:"Role"},{k:"call",l:"Call"}], "Cast & talent");
+  if(ozf && contactsSec){ contactsSec.classList.add("contacts-top"); sheet.append(contactsSec); }
   if(S.inline){
     const F=(k,paths,o={})=>h("div",{class:"fact"}, o.kpath ? E("span",{class:"k"},o.kpath,k,{ph:k}) : h("span",{class:"k"},k),
       ...paths.map(([p,ph])=>E("span",{class:"v ie-line"},p,"",{ph,multi:o.multi})));
@@ -568,8 +612,9 @@ function renderSheet(){
     if(ozf) L.push(F("Nearest underground",[["tube","one point per line"]],{multi:true}));
     L.push(F("Nearest A&E",[["hospital","hospital, road, area"]]));
     sheet.append(h("div",{class:"facts"}, ...L));
+    const lb0=linksBlock(s); if(lb0) sheet.append(lb0);
     sheet.append(h("div",{class:"dayline"}, E("p",null,"location.notes","",{ph:"location / day notes",multi:true})));
-    for(const x of (ozf ? [schedSec, castSec, crewSec, contactsSec] : [contactsSec, schedSec, crewSec, castSec])) if(x) sheet.append(x);
+    for(const x of (ozf ? [schedSec, castSec, crewSec] : [contactsSec, schedSec, crewSec, castSec])) if(x) sheet.append(x);
   } else if(ozf){
     // Only facts that are filled in; anything still TBC is listed once, quietly.
     const filled = facts.filter(([,v])=>!isTBC(v)), tbc = facts.filter(([,v])=>isTBC(v)).map(([k])=>k.toLowerCase());
@@ -577,14 +622,17 @@ function renderSheet(){
     if(loc.notes) sheet.append(h("div",{class:"dayline"},
       loc.notes ? h("p",null, loc.notes) : null,
       null));
-    for(const x of [schedSec, castSec, crewSec, contactsSec]) if(x) sheet.append(x);
+    const lb1=linksBlock(s); if(lb1) sheet.append(lb1);
+    for(const x of [schedSec, castSec, crewSec]) if(x) sheet.append(x);
   } else {
     sheet.append(h("div",{class:"facts"}, ...facts.map(([k,v,l])=>isTBC(v) ? h("div",{class:"fact"},h("span",{class:"k"},k), h("span",{class:"v"},tbcNode(v))) : factNode(k,v,l))));
+    { const lb2=linksBlock(s); if(lb2) sheet.append(lb2); }
     if(loc.notes) sheet.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Location notes")), h("p",{style:"margin:0;white-space:pre-line"},loc.notes)));
     for(const x of [contactsSec, schedSec, crewSec, castSec]) if(x) sheet.append(x);
   }
   sheet.append(h("div",{class:"foot"}, h("span",null,"Version "+(s.version||1)), s.updated? h("span",null,"Updated "+fmtStamp(s.updated)) : null, h("span",null,"Tap Confirm next to your name once you've read your call time")));
   main.append(sheet);
+  readBar();
   if(S.inline){ enableInline(sheet); enableDrag(sheet);
     if(S.ieMoved){ const t=sheet.querySelector('.row-tools[data-key="'+S.ieMoved.split(".")[0]+'"][data-i="'+S.ieMoved.split(".")[1]+'"]'); S.ieMoved=null;
       const row=t && t.closest("tr, li, .contact"); if(row){ row.scrollIntoView({block:"nearest"}); row.classList.add("just-moved"); setTimeout(()=>row.classList.remove("just-moved"),900); } }
@@ -597,7 +645,8 @@ function setupReveal(root){
   if(!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if(revealObserver) revealObserver.disconnect();
   revealObserver = new IntersectionObserver(entries=>{
-    for(const e of entries) if(e.isIntersecting){ e.target.classList.add("rv-in"); revealObserver.unobserve(e.target); }
+    let k=0;
+    for(const e of entries) if(e.isIntersecting){ e.target.style.setProperty("--rd",(Math.min(k++,6)*40)+"ms"); e.target.classList.add("rv-in"); revealObserver.unobserve(e.target); }
   }, {rootMargin:"0px 0px -5% 0px", threshold:0.05});
   const vh = window.innerHeight;
   const sel = ".fact,.dayline,.sec-h,.sched tr,.people tr,.contact,ul.list li,.open tr";
@@ -674,7 +723,7 @@ function renderEditor(){
       field(d,"project","Project",{ph:"e.g. onezerofive"}), field(d,"client","Client"), field(d,"title","Title",{ph:"e.g. Campaign"}),
       field(d,"date","Date",{type:"date"}), field(d,"dayOf","Day",{ph:"Day 1 of 2"}),
       field(d,"status","Status",{options:[["draft","Draft"],["issued","Issued"],["wrapped","Wrapped"]]}),
-      field(d,"crewCall","General crew call",{ph:"08:00"}), field(d,"hours","Venue hours",{ph:"08:00–18:00"}), field(d,"sunset","Sunset",{ph:"≈ 16:10"}),
+      field(d,"crewCall","General crew call",{ph:"08:00"}), field(d,"talentCall","Talent call (blank = earliest cast call)",{ph:"11:30"}), field(d,"hours","Venue hours",{ph:"08:00–18:00"}), field(d,"sunset","Sunset",{ph:"≈ 16:10"}),
       field(d,"tube","Nearest underground (one point per line)",{area:true}), field(d,"hospital","Nearest A&E"))));
   wrap.append(h("section",{class:"sec"}, h("div",{class:"sec-h"},h("h3",null,"Location")),
     h("div",{class:"fgrid"}, field(d,"location.label","Location label",{ph:"Location"}), field(d,"location.name","Venue"), field(d,"location.address","Address"), field(d,"location.notes","Location notes",{area:true,wide:true}),

@@ -178,6 +178,80 @@ span.ie.ie-line,span.ie.d,span.ie.who{display:block}
 td.tools-td{width:1%;white-space:nowrap}
 ul.list li .row-tools{display:inline-flex;margin:0 0 0 10px;vertical-align:middle}
 .ie-note{display:inline}
+
+/* ===== onezerofive motion: quiet and slow. Off while editing and for reduced motion. ===== */
+:root{--ease-out:cubic-bezier(.25,.6,.3,1)}
+/* Opening: title letters settle in softly, then the rest of the header and the facts fade in */
+.ozf h2.split .w{display:inline-block;white-space:nowrap}
+.ozf h2.split .ch{display:inline-block}
+.ozf.intro h2.split .ch{opacity:0;transform:translateY(.15em);animation:oz-rise .6s var(--ease-out) forwards;animation-delay:calc(var(--i) * 22ms + 80ms)}
+.ozf.intro .kicker,.ozf.intro .sub,.ozf.intro .crewcall,.ozf.intro .ozf-right .when,.ozf.intro .ozf-right .dayof,.ozf.intro .countdown,.ozf.intro .facts .fact{opacity:0;animation:oz-fade .7s var(--ease-out) forwards}
+.ozf.intro .kicker{animation-delay:.05s}
+.ozf.intro .countdown{animation-delay:.15s}
+.ozf.intro .ozf-right .when,.ozf.intro .ozf-right .dayof{animation-delay:.3s}
+.ozf.intro .sub,.ozf.intro .crewcall{animation-delay:.4s}
+.ozf.intro .facts .fact{animation-delay:.5s}
+@keyframes oz-rise{to{opacity:1;transform:none}}
+@keyframes oz-fade{from{opacity:0}to{opacity:1}}
+/* Scroll: rows arriving together fade in one after another */
+.ozf .rv:not(tr),.ozf tr.rv > td{transition-delay:var(--rd,0ms)}
+/* Hover: soft background fade only */
+@media (hover:hover){
+  .ozf .sheet-top,.ozf .fact,.ozf .dayline,.ozf .contact,.ozf .sched td,.ozf .people td{transition:background-color .4s ease}
+}
+/* Buttons: a gentle press */
+.ozf .btn{transition:border-color .3s ease,background-color .3s ease,transform .12s ease}
+.ozf .btn:active{transform:scale(.98)}
+/* Confirmed: the mark settles in */
+.cf .ok.pop::before{animation:oz-pop .45s var(--ease-out) both}
+@keyframes oz-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+/* Reading progress */
+#readbar{position:fixed;top:0;left:0;right:0;height:1px;background:#6B6E73;transform-origin:left center;transform:scaleX(0);opacity:0;transition:opacity .4s;z-index:50;pointer-events:none}
+#readbar.on{opacity:.55}
+@media (prefers-reduced-motion:reduce){
+  .ozf.intro *{animation:none !important;opacity:1}
+  .cf .ok.pop::before{animation:none} #readbar{display:none}
+}
+/* Talent call sits next to crew call */
+.ozf .ozf-left .calls{display:flex;gap:44px;flex-wrap:wrap;margin-top:22px}
+.ozf .ozf-left .calls .crewcall{margin-top:0}
+.ozf.intro .calls .talentcall{animation-delay:.45s}
+/* Key contacts directly under the header */
+.ozf .contacts-top{border-bottom:1px solid var(--line)}
+
+/* onezerofive sheets: everything lowercase, labels and buttons included (Dean, 13 Oct). Text being edited keeps its real case. */
+.ozf *,.ozf *::before,.ozf *::after{text-transform:lowercase !important}
+.ozf .ie{text-transform:none !important}
+/* Links (e.g. the Canva deck): slate wipe on hover, the circumpunct mark draws in and gently pulses. */
+.links{border-bottom:1px solid var(--line)}
+.link-card{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:18px;padding:18px 36px;color:var(--ink);text-decoration:none;background:#FFFFFF}
+.link-card + .link-card{border-top:1px solid var(--line)}
+.link-card::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--ink);transform:scaleX(0);transform-origin:left center;transition:transform .55s cubic-bezier(.7,0,.2,1)}
+a.link-card:hover::before,a.link-card:focus-visible::before{transform:scaleX(1)}
+a.link-card:hover,a.link-card:focus-visible{color:#FFFFFF}
+a.link-card:focus-visible{outline:none}
+.link-card .lk-mark{width:30px;height:30px;flex:none;overflow:visible}
+.lk-mark circle{fill:none;stroke:currentColor;stroke-width:1.3}
+.lk-mark .dot{fill:currentColor;stroke:none;transform-origin:12px 12px;animation:lk-dot .5s .9s both cubic-bezier(.2,.8,.2,1.4)}
+.lk-mark .ring{stroke-dasharray:70;stroke-dashoffset:70;animation:lk-draw 1s both cubic-bezier(.6,0,.2,1)}
+.lk-mark .r1{animation-delay:.15s}
+.lk-mark .r2{stroke-dasharray:42;stroke-dashoffset:42;animation-delay:.45s}
+.lk-mark .ripple{opacity:0;transform-origin:12px 12px;stroke-width:1;animation:lk-ripple 6s 2s infinite ease-out}
+@keyframes lk-draw{to{stroke-dashoffset:0}}
+@keyframes lk-dot{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes lk-ripple{0%{opacity:.3;transform:scale(1)}45%,100%{opacity:0;transform:scale(1.6)}}
+.lk-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.lk-label{font-family:var(--head);font-size:14px;letter-spacing:.28em;text-transform:lowercase}
+.lk-sub{font-family:var(--head);font-size:10px;letter-spacing:.24em;text-transform:lowercase;opacity:.7}
+.lk-arrow{margin-left:auto;font-size:18px;transition:transform .45s cubic-bezier(.7,0,.2,1)}
+a.link-card:hover .lk-arrow{transform:translateX(8px)}
+.ie-link{cursor:default}
+.ie-link .row-tools{margin:0 0 0 auto}
+.links-add{padding:10px 36px;display:flex}
+.links-add .ie-add{margin-left:0}
+@media (max-width:700px){ .link-card{padding:16px 20px} .links-add{padding:10px 20px} }
+@media (prefers-reduced-motion:reduce){ .lk-mark *{animation:none !important;stroke-dashoffset:0 !important} .lk-mark .ripple{display:none} .link-card::before,.lk-arrow{transition:none} }
+
 .row-tools .rt:disabled{opacity:.3;cursor:default}
 .row-tools .rt-drag{display:inline-flex;align-items:center;justify-content:center;cursor:grab;font-size:12px;letter-spacing:-2px;user-select:none}
 @media (hover:none){ .row-tools .rt-drag{display:none} }
@@ -398,8 +472,8 @@ textarea.cell-area{min-height:0;height:auto;resize:vertical;font:inherit}
 /* Scroll reveal: content below the fold fades up with a soft blur the first time it scrolls into view.
    Driven by IntersectionObserver in app.js (setupReveal), so it works in every modern browser.
    Content already on screen is never hidden, and nothing is hidden when reduced motion is set. */
-.rv:not(tr),tr.rv > td{opacity:0;filter:blur(4px);transform:translateY(10px)}
-.rv:not(tr),tr.rv > td{transition:opacity .55s ease,filter .55s ease,transform .55s ease}
+.rv:not(tr),tr.rv > td{opacity:0;transform:translateY(5px)}
+.rv:not(tr),tr.rv > td{transition:opacity .6s ease,transform .6s ease}
 .rv.rv-in:not(tr),tr.rv.rv-in > td{opacity:1;filter:none;transform:none}
 
 /* ===== Call sheets on phones: stack the tables instead of scrolling sideways ===== */
@@ -524,7 +598,7 @@ html,body{margin:0}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=34"></script>
-<script src="app.js?v=34"></script>
+<script src="config.js?v=40"></script>
+<script src="app.js?v=40"></script>
 </body>
 </html>
