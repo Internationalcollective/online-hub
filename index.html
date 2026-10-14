@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>International Collective Online Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Oswald:wght@300;400;500&family=Nunito+Sans:wght@300;400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Jost:wght@200;300;400;500&family=Oswald:wght@300;400;500&family=Nunito+Sans:wght@300;400;500&display=swap">
 <style>
 /* International Collective online hub: neutral house style shared by every brand. */
 :root{
@@ -221,7 +221,7 @@ ul.list li .row-tools{display:inline-flex;margin:0 0 0 10px;vertical-align:middl
 
 /* onezerofive sheets: everything lowercase, labels and buttons included (Dean, 13 Oct). Text being edited keeps its real case. */
 .ozf *,.ozf *::before,.ozf *::after{text-transform:lowercase !important}
-.ozf .ie{text-transform:none !important}
+.ozf .ie,.ozf [data-path]:not(#_),.ozf [data-path]:not(#_) *{text-transform:none !important}
 /* Links (e.g. the Canva deck): slate wipe on hover, the circumpunct mark draws in and gently pulses. */
 .links{border-bottom:1px solid var(--line)}
 .link-card{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:18px;padding:18px 36px;color:var(--ink);text-decoration:none;background:#FFFFFF}
@@ -556,6 +556,329 @@ html:has(#gate:not([hidden])),body:has(#gate:not([hidden])){background:var(--ic-
 
 [hidden]{display:none!important}
 html,body{margin:0}
+
+/* ===================== Dancers Inc. — 2027 style guide =====================
+   Calm, airy, weightless. Chalk White ground; pale Pool Blue / Ice Blue bands; no black, no hard shadow.
+   Darkest thing is Grey Azure #4A5258; the one bright stroke is Curaçao #7CCFD6.
+   Jost only: display Thin/ExtraLight uppercase wide; body Light 300; small caps Regular 400 +0.32em.
+   Hairline dividers, square corners. Motion: content rises into place, hovers give a small soft nudge. */
+.b-dancers-inc{
+  color-scheme:light;
+  --ink:#4A5258; --strong:#4A5258; --muted:#7E858A; --grey1:#B8BCC0; --line:#D6D9DC; --soft:#FFFFFF; --paper:#F6F6F4; --danger:#9B4A43;
+  --accent:#7CCFD6; --pool:#CDE7EC; --ice:#E6F1F6; --seaglass:#D9EDE7; --adriatic:#A9DCD8;
+  --head:"Jost","Helvetica Neue",Arial,sans-serif; --body:"Jost","Helvetica Neue",Arial,sans-serif;
+  font-family:var(--body); font-weight:300; color:var(--ink);
+}
+/* case: real case for body text, uppercase for headlines and small labels (undo the onezerofive lowercase) */
+.ozf.dinc *,.ozf.dinc *::before,.ozf.dinc *::after{text-transform:none !important}
+.ozf.dinc h2,.ozf.dinc .k,.ozf.dinc .sub,.ozf.dinc .sec-h h3,.ozf.dinc .sec-h .count,.ozf.dinc th,.ozf.dinc .chip,.ozf.dinc .btn,.ozf.dinc .when,.ozf.dinc .dayof,
+.ozf.dinc .countdown > .k,.ozf.dinc .flip-label,.ozf.dinc .maplink,.ozf.dinc .contact b,.ozf.dinc .cf .ok,.ozf.dinc .lk-label,.ozf.dinc .lk-sub,.ozf.dinc .foot,.ozf.dinc .sched td .who{text-transform:uppercase !important}
+.ozf.dinc h2 *,.ozf.dinc .btn *,.ozf.dinc .sec-h h3 *,.ozf.dinc .foot *{text-transform:uppercase !important}
+.ozf.dinc .sched tr.call td,.ozf.dinc .sched tr.meal td{background:transparent}
+.ozf.dinc .sched tr.meal td:nth-child(2) strong::after{content:none !important;display:none;text-transform:uppercase !important;font-family:var(--head);font-weight:400;font-size:9px;letter-spacing:.32em;border-color:var(--accent);color:var(--ink)}
+.ozf.dinc .ie{text-transform:none !important}
+/* ground and surfaces */
+.ozf.dinc.sheet,.ozf.dinc .sheet-top,.ozf.dinc .fact,.ozf.dinc .dayline,.ozf.dinc .sec,.ozf.dinc .foot,.ozf.dinc .contact,.ozf.dinc .sched td,.ozf.dinc .people td,.ozf.dinc .link-card,.ozf.dinc .actions{background:#F6F6F4}
+.ozf.dinc .sheet-top{background:linear-gradient(180deg,#F6F6F4 0%,#E6F1F6 100%)}
+.ozf.dinc .facts{background:linear-gradient(90deg,#CDE7EC 0%,#E6F1F6 100%);border-bottom:0}
+.ozf.dinc .facts .fact{background:transparent}
+.ozf.dinc .contacts{background:var(--line);border-color:var(--line)}
+/* type */
+.ozf.dinc,.ozf.dinc p,.ozf.dinc td,.ozf.dinc li{font-family:var(--body);font-weight:300}
+.ozf.dinc h2,.ozf.dinc h2.split{font-family:var(--head);font-weight:200;letter-spacing:.12em;line-height:1.12;color:var(--ink)}
+.ozf.dinc .sub{font-weight:400;font-size:10px;letter-spacing:.32em;color:var(--muted)}
+.ozf.dinc .k,.ozf.dinc th,.ozf.dinc .sec-h .count,.ozf.dinc .flip-label,.ozf.dinc .countdown > .k,.ozf.dinc .maplink,.ozf.dinc .lk-sub,.ozf.dinc .foot{font-family:var(--head);font-weight:400;font-size:10px;letter-spacing:.32em;color:var(--muted)}
+.ozf.dinc .sec-h h3{font-family:var(--head);font-weight:200;font-size:22px;letter-spacing:.12em;color:var(--ink)}
+.ozf.dinc .sec-h{flex-direction:column;align-items:flex-start;gap:14px}
+.ozf.dinc .sec-h h3::after{content:"";display:block;width:34px;height:1px;background:var(--ink);margin-top:14px}
+.ozf.dinc .ozf-left .crewcall b{font-weight:200;font-size:34px;letter-spacing:.06em;color:var(--ink)}
+.ozf.dinc .when,.ozf.dinc .dayof{font-weight:400;font-size:11px;letter-spacing:.32em;color:var(--ink)}
+.ozf.dinc .fact .v,.ozf.dinc .fact-list li{font-weight:300;color:var(--ink)}
+.ozf.dinc .contact b{font-weight:400;font-size:12px;letter-spacing:.24em;color:var(--ink)}
+.ozf.dinc .contact .r{font-weight:300;color:var(--muted)}
+.ozf.dinc .sched td strong{font-weight:400;color:var(--ink)}
+.ozf.dinc .sched td .who{font-weight:400;font-size:10px;letter-spacing:.24em;color:var(--muted)}
+.ozf.dinc .sched td.time,.ozf.dinc .people td.time{font-weight:300;letter-spacing:.08em;color:var(--ink)}
+/* the logo pill (Charge gradient, Sky → Curaçao) */
+.dinc-pill{display:inline-flex;align-items:center;gap:.28em;padding:7px 16px;border-radius:999px;background:linear-gradient(135deg,#9FDCE3 0%,#7CCFD6 100%);color:#FFFFFF;font-family:"Jost","Helvetica Neue",Arial,sans-serif;font-weight:300;font-size:12px;letter-spacing:.06em;line-height:1}
+.dinc-pill b{font-weight:500}
+.ozf.dinc .chip{border-radius:0;border-color:var(--line);color:var(--muted);font-weight:400;font-size:9px;letter-spacing:.32em}
+/* countdown: pale Pool Blue tiles, thin Grey Azure digits, square corners */
+.ozf.dinc .flip .f-top,.ozf.dinc .flip .f-bot,.ozf.dinc .flip .f-flap-top,.ozf.dinc .flip .f-flap-bot{background:#CDE7EC;border-radius:0}
+.ozf.dinc .flipclock .flip{color:#4A5258;font-weight:200;border-radius:0}
+.ozf.dinc .flipclock .flip-colon{color:#7CCFD6;font-weight:200}
+/* lists: the brand bullet — a short Curaçao hairline */
+.ozf.dinc ul.list li::before{width:12px;height:1px;top:.85em;border:0;border-radius:0;background:var(--accent)}
+.ozf.dinc .fact-link .v,.ozf.dinc .fact-link .fact-list li,.ozf.dinc .contact a.n{text-decoration-color:var(--accent)}
+/* buttons: outline; hover border to Grey Azure, ground white 50% */
+.ozf.dinc .btn{border-radius:0;border:1px solid var(--grey1);background:transparent;color:var(--ink);font-family:var(--head);font-weight:400;font-size:10px;letter-spacing:.28em}
+@media (hover:hover){ .ozf.dinc .btn:not(:disabled):hover{border-color:var(--ink);background:rgba(255,255,255,.5)} }
+.ozf.dinc .btn.primary{background:var(--ink);border-color:var(--ink);color:#FFFFFF}
+@media (hover:hover){ .ozf.dinc .btn.primary:not(:disabled):hover{background:#5A6369;border-color:#5A6369} }
+.ozf.dinc .cf .ok::before{border-color:var(--accent);background:radial-gradient(circle,var(--accent) 0 2px,transparent 2.5px)}
+/* campaign/deck links in Dancers Inc. colours */
+.ozf.dinc .link-card::before{background:linear-gradient(90deg,#CDE7EC,#E6F1F6)}
+.ozf.dinc a.link-card:hover,.ozf.dinc a.link-card:focus-visible{color:var(--ink)}
+.ozf.dinc .lk-mark circle{stroke:var(--accent)} .ozf.dinc .lk-mark .dot{fill:var(--accent)}
+/* hover: Ice Blue wash and a small, soft nudge */
+@media (hover:hover){
+  .ozf.dinc .fact:hover,.ozf.dinc .contact:hover,.ozf.dinc .dayline:hover,.ozf.dinc .sheet-top:hover{background-color:transparent}
+  .ozf.dinc .contact:hover{background:#E6F1F6}
+  .ozf.dinc:not(.editing) .sched tr:hover td,.ozf.dinc:not(.editing) .people tr:hover td{background:#E6F1F6}
+  .ozf.dinc:not(.editing) .sched td strong,.ozf.dinc:not(.editing) .people td:first-child{transition:transform .45s cubic-bezier(.34,1.56,.64,1),background-color .4s ease}
+  .ozf.dinc:not(.editing) .sched td strong{display:inline-block}
+  .ozf.dinc:not(.editing) .sched tr:hover td strong{transform:translateX(3px)}
+}
+/* motion: content rises into place (the onezerofive sheet only fades) */
+.ozf.dinc.intro .kicker,.ozf.dinc.intro .sub,.ozf.dinc.intro .crewcall,.ozf.dinc.intro .ozf-right .when,.ozf.dinc.intro .ozf-right .dayof,.ozf.dinc.intro .countdown,.ozf.dinc.intro .facts .fact{animation-name:di-rise}
+@keyframes di-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.ozf.dinc .rv:not(tr),.ozf.dinc tr.rv > td{transform:translateY(10px)}
+.ozf.dinc .rv.rv-in:not(tr),.ozf.dinc tr.rv.rv-in > td{transform:none}
+.ozf.dinc ~ #readbar, body:has(.ozf.dinc) #readbar{background:#7CCFD6}
+@media (prefers-reduced-motion:reduce){ .ozf.dinc:not(.editing) .sched tr:hover td strong{transform:none} }
+
+.lk-mark.lk-dinc .arrow{fill:none;stroke:var(--accent);stroke-width:1.2;stroke-linecap:square;stroke-dasharray:20;stroke-dashoffset:20;animation:lk-draw .8s .8s both cubic-bezier(.6,0,.2,1);transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
+a.link-card:hover .lk-mark.lk-dinc .arrow{transform:translateX(1.5px)}
+.ozf.dinc .lk-label{font-weight:400;font-size:12px;letter-spacing:.32em;color:var(--ink)}
+.ozf.dinc .lk-arrow{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){ .lk-mark.lk-dinc .arrow{animation:none;stroke-dashoffset:0} }
+
+/* Dancers Inc.: numbered talent list — the brand's thin index numeral (01, 02 …) */
+.ozf.dinc .people-cast tbody{counter-reset:talent}
+.ozf.dinc .people-cast tbody tr{counter-increment:talent}
+.ozf.dinc .people-cast tbody td:first-child::before{content:counter(talent, decimal-leading-zero);display:inline-block;min-width:2.4em;margin-right:6px;font-family:var(--head);font-weight:200;font-size:15px;letter-spacing:.06em;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* Description text uses normal letter-spacing on all designed sheets (Dean, 14 Oct); titles, labels and headings keep their tracking */
+.ozf .sched td .who,.ozf .sched td .d,.ozf .sched .desc-list li,.ozf .fact .v,.ozf .fact-list li,.ozf .contact .r,.ozf .dayline p,.ozf .lk-sub{letter-spacing:normal !important}
+
+/* Cast & crew tables (computers): fixed, evenly spaced columns; call and base centred (Dean, 14 Oct) */
+@media (min-width:641px){
+  .ozf:not(.editing) .people{table-layout:fixed;width:100%}
+  .ozf:not(.editing) .people th.c-name{width:30%}
+  .ozf:not(.editing) .people th.c-role{width:auto}
+  .ozf:not(.editing) .people th.c-call{width:13%}
+  .ozf:not(.editing) .people th.c-base{width:15%}
+  .ozf:not(.editing) .people th.c-cf{width:16%}
+  .ozf:not(.editing) .people :is(th,td):is(.c-call,.c-base){text-align:center}
+  .ozf:not(.editing) .people td.time{white-space:nowrap}
+  .ozf:not(.editing) .people td{overflow-wrap:anywhere}
+}
+
+/* ===================== I.N.C The Circle — 2027 style guide =====================
+   "Deeper ink, quieter light, the same generous white space." Shares Jost and structure with Dancers Inc. (class "dinc");
+   the difference lives in the ink. Light Azure ground (70%), Circle Ink / Midnight for headlines, rules and solids; Slate body;
+   Steel only for eyebrows and metadata; Ice Blue as the single tint band. No pure black, no pure white, no saturated accent. */
+.b-the-circle{
+  color-scheme:light;
+  --ink:#1C3E55; --strong:#12222D; --muted:#7E909D; --grey1:#B9C4CB; --line:#DDE3E7; --soft:#F3F4F5; --paper:#F3F4F5; --danger:#8A3B3B;
+  --accent:#1C3E55; --pool:#E6F1F6; --ice:#E6F1F6; --slate:#3A4E5C;
+  --head:"Jost","Helvetica Neue",Arial,sans-serif; --body:"Jost","Helvetica Neue",Arial,sans-serif;
+  font-family:var(--body); font-weight:300; color:var(--ink);
+}
+.ozf.circ.sheet,.ozf.circ .sheet-top,.ozf.circ .fact,.ozf.circ .dayline,.ozf.circ .sec,.ozf.circ .foot,.ozf.circ .contact,.ozf.circ .sched td,.ozf.circ .people td,.ozf.circ .link-card,.ozf.circ .actions{background:#F3F4F5}
+.ozf.circ .sheet-top{background:#F3F4F5}
+.ozf.circ .facts{background:#E6F1F6}
+.ozf.circ .facts .fact{background:transparent}
+.ozf.circ h2,.ozf.circ h2.split{font-weight:100;letter-spacing:.14em;color:var(--ink)}
+.ozf.circ .sec-h h3{font-weight:200;color:var(--ink)}
+.ozf.circ .sec-h h3::after{background:var(--ink)}
+.ozf.circ .fact .v,.ozf.circ .fact-list li,.ozf.circ .sched td .d,.ozf.circ .contact .r{color:var(--slate)}
+.ozf.circ .ozf-left .crewcall b{font-weight:100;color:var(--ink)}
+/* the lock-up: mark left, I.N.C over THE CIRCLE */
+.circle-lockup{display:inline-flex;align-items:center;gap:10px;color:var(--ink)}
+.circle-lockup .circle-mark{width:34px;height:34px;flex:none}
+.circle-mark .ring,.lk-circ .ring{fill:none;stroke:currentColor;stroke-width:.9}
+.circle-mark .disc,.lk-circ .disc{fill:currentColor;stroke:none}
+.circle-mark .void,.lk-circ .void{fill:#F3F4F5;stroke:none}
+.cl-words{display:flex;flex-direction:column;line-height:1.1}
+.cl-inc{font-family:var(--head);font-weight:200;font-size:15px;letter-spacing:.32em}
+.cl-name{font-family:var(--head);font-weight:400;font-size:8.5px;letter-spacing:.38em}
+/* countdown: Circle Ink tiles with Light Azure digits */
+.ozf.circ .flip .f-top,.ozf.circ .flip .f-bot,.ozf.circ .flip .f-flap-top,.ozf.circ .flip .f-flap-bot{background:#1C3E55}
+.ozf.circ .flipclock .flip{color:#F3F4F5;font-weight:200}
+.ozf.circ .flipclock .flip-colon{color:#7E909D}
+/* bullets: the 4px ink "active dot" */
+.ozf.circ ul.list li::before{width:4px;height:4px;border-radius:50%;top:.75em;background:var(--ink)}
+.ozf.circ .fact-link .v,.ozf.circ .fact-link .fact-list li,.ozf.circ .contact a.n{text-decoration-color:var(--grey1)}
+.ozf.circ .fact-link:hover .v,.ozf.circ .fact-link:hover .fact-list li,.ozf.circ .contact a.n:hover{text-decoration-color:var(--ink)}
+/* buttons: outline with a Silvermist rule; the one solid is Circle Ink */
+.ozf.circ .btn{border-color:var(--grey1);color:var(--ink)}
+@media (hover:hover){ .ozf.circ .btn:not(:disabled):hover{border-color:var(--ink);background:#E6F1F6} }
+.ozf.circ .btn.primary{background:#1C3E55;border-color:#1C3E55;color:#F3F4F5}
+@media (hover:hover){ .ozf.circ .btn.primary:not(:disabled):hover{background:#12222D;border-color:#12222D} }
+.ozf.circ .cf .ok::before{border-color:var(--ink);background:radial-gradient(circle,var(--ink) 0 2px,transparent 2.5px)}
+/* hover: a quiet Ice Blue wash, no colour shift in the type */
+@media (hover:hover){
+  .ozf.circ .contact:hover{background:#E6F1F6}
+  .ozf.circ:not(.editing) .sched tr:hover td,.ozf.circ:not(.editing) .people tr:hover td{background:#E6F1F6}
+}
+/* links: Ice Blue wash on hover; the Circle mark as the icon */
+.ozf.circ .link-card::before{background:#E6F1F6}
+.ozf.circ .lk-mark.lk-circ{color:var(--ink)}
+.ozf.circ .lk-mark.lk-circ .ring{stroke-dasharray:72;stroke-dashoffset:72;animation:lk-draw 1s .15s both cubic-bezier(.6,0,.2,1)}
+.ozf.circ .lk-mark.lk-circ .disc{transform-origin:12px 12px;animation:lk-dot .6s .8s both cubic-bezier(.2,.8,.2,1.2)}
+/* index numerals: Thin 100, always two digits */
+.ozf.circ .people-cast tbody td:first-child::before{font-weight:100;font-size:17px;color:var(--ink)}
+body:has(.ozf.circ) #readbar{background:#1C3E55}
+@media (prefers-reduced-motion:reduce){ .ozf.circ .lk-mark.lk-circ *{animation:none !important;stroke-dashoffset:0 !important} }
+
+/* Sidebar list spacing */
+#list{display:flex;flex-direction:column;gap:32px}
+#list .grp{gap:10px}
+#list .grp h2{margin:0 0 4px;padding-left:2px;line-height:1.4}
+#list .grp + .grp{padding-top:4px}
+.side .item{grid-template-columns:48px 1fr;gap:16px;padding:16px 16px 16px 14px;align-items:center}
+.side .item .d{padding-right:14px;align-self:stretch}
+.side .item .t{gap:4px}
+.side .item .t strong{line-height:1.35}
+.side .item .meta{gap:6px;margin-top:8px}
+.side .item .meta .chip{letter-spacing:.08em;padding:2px 6px;line-height:1.5;white-space:nowrap}
+.side .item .meta{gap:5px}
+.side .item{grid-template-columns:40px 1fr;gap:12px;padding:16px 12px 16px 10px}.side .item .d{padding-right:10px}
+@media (min-width:901px){.app{grid-template-columns:336px minmax(0,1fr)}}
+
+/* Website / socials at the bottom of the sheet */
+.links-foot{border-bottom:0;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.links-foot .link-card + .link-card{border-left:1px solid var(--line)}
+@media (max-width:640px){.links-foot{grid-template-columns:1fr}.links-foot .link-card + .link-card{border-left:0;border-top:1px solid var(--line)}}
+.editing .links-foot{display:block}
+.editing .links-foot .link-card + .link-card{border-left:0}
+/* No 'lunch' tag on any brand */
+.ozf .sched tr.meal td:nth-child(2) strong::after{content:none !important;display:none !important}
+/* Header: date sits on the same line as the crew / talent call (desktop) */
+@media (min-width:641px){
+  .ozf .ozf-top{align-items:stretch}
+  .ozf .ozf-right{justify-content:flex-start}
+  .ozf .ozf-right .when{margin-top:auto !important;padding-top:14px;line-height:1}
+}
+
+/* ===== Liquid Glass — test on Dancers Inc. (.sheet.glass) ===== */
+.glass{--g-hover:rgba(230,244,248,.85);--g-btn:rgba(214,239,244,.65);--g-hl:rgba(143,211,222,.28);--g-okc:#7CCFD6;--g-tint:rgba(232,246,249,.55);--g-edge:rgba(255,255,255,.75);--g-ink:#2E4A55;--g-shadow:rgba(28,74,92,.16);--g-spring:cubic-bezier(.22,1.35,.36,1)}
+.glass .g-glass{
+  background:
+    radial-gradient(140% 120% at var(--g-sheen,30%) -30%, rgba(255,255,255,.75), rgba(255,255,255,0) 52%),
+    linear-gradient(180deg, rgba(255,255,255,.5), var(--g-tint));
+  -webkit-backdrop-filter:blur(26px) saturate(190%) brightness(1.05);
+  backdrop-filter:blur(26px) saturate(190%) brightness(1.05);
+  border:1px solid var(--g-edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 1px rgba(255,255,255,.35), inset 0 0 0 .5px rgba(255,255,255,.4),
+             0 10px 30px var(--g-shadow), 0 1px 3px rgba(28,74,92,.10);
+  color:var(--g-ink);
+}
+/* Sticky bar that floats in once the header has scrolled away */
+.glass .g-wrap{position:sticky;top:0;height:0;z-index:40}
+.glass .g-bar{position:absolute;left:14px;right:14px;top:12px;display:flex;align-items:center;gap:22px;padding:10px 12px 10px 12px;border-radius:20px;
+  font-family:var(--head);letter-spacing:.12em;text-transform:uppercase;font-size:11px;
+  opacity:0;transform:translateY(-130%) scale(.94);pointer-events:none;transition:transform .6s var(--g-spring), opacity .25s ease}
+.glass.g-on .g-bar{opacity:1;transform:none;pointer-events:auto}
+.glass .g-pill{font-size:10px;padding:5px 12px;flex:none}
+.glass .g-cd{font-weight:300;font-size:15px;letter-spacing:.08em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.glass .g-calls{display:flex;gap:18px;margin-left:auto}
+.glass .g-calls span,.glass .g-me{display:inline-flex;align-items:baseline;gap:7px;white-space:nowrap;font-size:15px;font-weight:300;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.glass .g-bar i,.glass .g-fab .g-fab-k{font-style:normal;font-size:9.5px;font-weight:400;letter-spacing:.24em;opacity:.75}
+.glass .g-me{border:0;cursor:pointer;color:inherit;font-family:inherit;text-transform:inherit;padding:7px 14px;border-radius:999px;
+  background:rgba(255,255,255,.55);box-shadow:inset 0 1px 0 #fff, 0 1px 2px rgba(28,74,92,.12);transition:transform .35s var(--g-spring)}
+.glass .g-me:active{transform:scale(.93)}
+.glass .g-ok{font-size:12px;color:var(--g-okc);font-weight:500}
+/* Floating "your call" capsule (phones) */
+.glass .g-fab{display:none}
+@media (max-width:640px){
+  .glass .g-bar{left:10px;right:10px;top:10px;gap:12px;padding:8px 10px}
+  .glass .g-calls,.glass .g-me{display:none}
+  .glass .g-cd{margin-left:auto;font-size:14px}
+  .glass .g-fab{display:inline-flex;align-items:baseline;gap:9px;position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:50;
+    padding:13px 20px;border-radius:999px;font-family:var(--head);text-transform:uppercase;letter-spacing:.1em;font-size:15px;font-weight:300;cursor:pointer;
+    opacity:0;transform:translateY(40px) scale(.9);pointer-events:none;transition:transform .6s var(--g-spring), opacity .25s ease}
+  .glass.g-on .g-fab{opacity:1;transform:none;pointer-events:auto}
+  .glass .g-fab:active{transform:scale(.92)}
+  .glass .g-fab b{font-weight:300;font-variant-numeric:tabular-nums}
+}
+/* Row you jumped to glows briefly */
+.glass tr.g-hl td{animation:g-hl 1.8s ease}
+@keyframes g-hl{0%,35%{background:var(--g-hl)}100%{background:transparent}}
+/* Confirm buttons: glass capsules that squash and spring back */
+.glass .cf .btn{border-radius:999px;border:1px solid var(--g-edge);color:var(--g-ink);
+  background:radial-gradient(140% 120% at 30% -40%, rgba(255,255,255,.95), rgba(255,255,255,0) 55%), linear-gradient(180deg, rgba(255,255,255,.7), var(--g-btn));
+  box-shadow:inset 0 1px 0 #fff, inset 0 -1px 1px rgba(255,255,255,.4), 0 4px 12px rgba(28,74,92,.10), 0 1px 2px rgba(28,74,92,.10);
+  transition:transform .4s var(--g-spring), box-shadow .2s ease}
+.glass .cf .btn:hover{box-shadow:inset 0 1px 0 #fff, 0 6px 16px rgba(28,74,92,.16), 0 1px 2px rgba(28,74,92,.12)}
+.glass .cf .btn:active{transform:scale(.9,.86)}
+.glass .cf .ok.pop{animation:g-pop .7s var(--g-spring)}
+@keyframes g-pop{0%{transform:scale(.6,.9);opacity:.2}60%{transform:scale(1.08,.96)}100%{transform:none;opacity:1}}
+/* Footer links: a glass sheen on hover */
+.glass .links-foot .link-card{transition:background .3s ease, transform .4s var(--g-spring)}
+.glass .links-foot .link-card:hover{background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(226,244,248,.75))}
+.glass .links-foot .link-card:active{transform:scale(.985)}
+/* Fallbacks: no backdrop blur, Reduce Transparency, Reduce Motion */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ .glass .g-glass{background:rgba(246,251,252,.97)} }
+@media (prefers-reduced-transparency: reduce){ .glass .g-glass{-webkit-backdrop-filter:none;backdrop-filter:none;background:#F6FAFB} }
+@media (prefers-reduced-motion: reduce){ .glass .g-bar,.glass .g-fab,.glass .cf .btn,.glass .g-me{transition:opacity .2s ease !important} .glass .g-bar,.glass .g-fab{transform:none !important} .glass tr.g-hl td,.glass .cf .ok.pop{animation:none} }
+
+/* Glass hover focus: the row you point at grows 5% and tints; the rest of that table softly blurs (mouse / trackpad only) */
+@media (hover:hover) and (pointer:fine){
+  .glass .tbl{padding-block:18px;margin-block:-18px}
+  .glass .sched tbody tr,.glass .people tbody tr{transition:transform .45s var(--g-spring), filter .3s ease, opacity .3s ease;transform-origin:center}
+  .glass .sched tbody:has(tr:hover) tr:not(:hover),
+  .glass .people tbody:has(tr:hover) tr:not(:hover){filter:blur(.4px);opacity:.8}
+  .glass .sched tbody tr:hover,.glass .people tbody tr:hover{transform:scale(1.01);position:relative;z-index:2}
+  .glass .sched tbody tr:hover td,.glass .people tbody tr:hover td{background:var(--g-hover) !important;border-color:transparent}
+  .glass .sched tbody tr:hover,.glass .people tbody tr:hover{outline:10px solid var(--g-hover);outline-offset:-1px;border-radius:12px}
+  .glass .sched tr:hover td strong{transform:none}
+}
+@media (prefers-reduced-motion: reduce){ .glass .sched tbody tr:hover,.glass .people tbody tr:hover{transform:none} }
+
+/* Glass per brand */
+.glass.b-onezerofive{--g-tint:rgba(244,245,247,.6);--g-hover:rgba(239,240,242,.92);--g-btn:rgba(236,237,240,.75);--g-hl:rgba(107,110,115,.12);--g-okc:#6B6E73;--g-ink:#5E6166;--g-shadow:rgba(60,62,66,.14)}
+.glass.b-onezerofive .g-bar{text-transform:lowercase;letter-spacing:.3em}
+.glass.b-onezerofive .g-bar i,.glass.b-onezerofive .g-fab .g-fab-k{letter-spacing:.3em}
+.glass.b-onezerofive .g-fab{text-transform:lowercase;letter-spacing:.2em}
+.glass.b-onezerofive .cf .btn{text-transform:lowercase;letter-spacing:.3em}
+.glass .g-mark{flex:none;font-family:var(--head);font-size:11px;letter-spacing:.32em;padding:5px 4px 5px 8px}
+.glass.circ{--g-tint:rgba(230,241,246,.58);--g-hover:rgba(230,241,246,.92);--g-btn:rgba(218,233,240,.75);--g-hl:rgba(28,62,85,.10);--g-okc:#1C3E55;--g-ink:#1C3E55;--g-shadow:rgba(18,34,45,.14);--g-edge:rgba(255,255,255,.8)}
+.glass .g-circ{display:inline-flex;align-items:center;gap:9px;font-weight:400;letter-spacing:.3em;font-size:10.5px;color:#1C3E55}
+.glass .g-circ svg{width:22px;height:22px}
+.glass .g-cmark .ring{fill:none;stroke:currentColor;stroke-width:.9}.glass .g-cmark .disc{fill:currentColor}.glass .g-cmark .void{fill:#F3F4F5}
+
+/* Glass section titles (test: Dancers Inc.) — minimal at rest; turns into glass as it nears the reading line (--gt 0→1, set on scroll) */
+.glass .sec-h:not(.sec-plain){--gt:0;position:relative;isolation:isolate;overflow:hidden;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:16px;
+  padding:16px 26px;border-radius:999px;margin-inline:-6px;
+  box-shadow:0 10px 28px rgba(var(--gt-sh),calc(.10 * var(--gt))), 0 1px 3px rgba(var(--gt-sh),calc(.08 * var(--gt))), inset 0 0 0 1px rgba(var(--gt-sh),calc(.12 * (1 - var(--gt))))}
+.glass .sec-h:not(.sec-plain)::before{content:"";position:absolute;inset:-40% -45%;z-index:-2;
+  background:
+    radial-gradient(30% 95% at 12% 55%, var(--gt-a) 0%, transparent 72%),
+    radial-gradient(32% 100% at 88% 60%, var(--gt-b) 0%, transparent 72%),
+    var(--gt-base);
+  filter:blur(18px);opacity:calc(var(--gt) * .9);animation:g-flow 9s ease-in-out infinite alternate}
+.glass .sec-h:not(.sec-plain)::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;opacity:var(--gt);
+  background:linear-gradient(180deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,.25) 55%, rgba(255,255,255,.38) 100%);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), inset 0 -1px 1px rgba(255,255,255,.5), inset 0 0 0 1.5px rgba(255,255,255,.65), inset 0 0 18px rgba(255,255,255,.35)}
+.glass.dinc .sec-h:not(.sec-plain) h3{font-size:18px;letter-spacing:.14em;white-space:nowrap}
+.glass .sec-h:not(.sec-plain) h3::after{display:none}
+.glass .sec-h:not(.sec-plain) h3{white-space:nowrap}
+.glass .sec-h:not(.sec-plain) .count{margin-left:auto;white-space:nowrap}
+@media (max-width:640px){
+  .glass .sec-h:not(.sec-plain){padding:13px 18px;margin-inline:-4px;gap:10px}
+  .glass.dinc .sec-h:not(.sec-plain) h3{font-size:15px;letter-spacing:.1em}
+  .glass.dinc .sec-h:not(.sec-plain) .count{letter-spacing:.18em}
+  .glass .sec-h:not(.sec-plain) .count .bar{display:none}
+}
+@media (prefers-reduced-transparency: reduce){ .glass .sec-h:not(.sec-plain)::before{filter:none;background:var(--gt-base)} }
+
+/* Title glass: the blue flows across; hover lifts it 2% and brings it fully to glass */
+@property --gt{syntax:"<number>";inherits:true;initial-value:0}
+.glass .sec-h:not(.sec-plain){transition:--gt .35s ease, transform .45s var(--g-spring)}
+@keyframes g-flow{0%{transform:translateX(-28%)}100%{transform:translateX(28%)}}
+@media (hover:hover) and (pointer:fine){
+  .sheet.glass .sec-h:not(.sec-plain):hover{--gt:1 !important;transform:scale(1.01)}
+}
+@media (prefers-reduced-motion: reduce){ .glass .sec-h:not(.sec-plain)::before{animation:none} .sheet.glass .sec-h:not(.sec-plain):hover{transform:none} }
+
+/* Glass title colours per brand */
+.glass{--gt-a:rgba(124,207,214,.55);--gt-b:rgba(159,220,227,.45);--gt-base:#EEF7F8;--gt-sh:28,74,92}
+.glass.b-onezerofive{--gt-a:rgba(150,153,158,.32);--gt-b:rgba(190,192,196,.38);--gt-base:#F5F6F7;--gt-sh:60,62,66}
+.glass.circ{--gt-a:rgba(28,62,85,.16);--gt-b:rgba(185,196,203,.45);--gt-base:#EDF4F7;--gt-sh:18,34,45}
+.glass.b-onezerofive .sec-h:not(.sec-plain) h3{font-size:13px}
+@media (max-width:640px){ .glass.b-onezerofive .sec-h:not(.sec-plain) h3{letter-spacing:.3em} .glass.b-onezerofive .sec-h:not(.sec-plain) .count{letter-spacing:.16em} }
 </style>
 </head>
 <body>
@@ -598,7 +921,7 @@ html,body{margin:0}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=40"></script>
-<script src="app.js?v=40"></script>
+<script src="config.js?v=67"></script>
+<script src="app.js?v=67"></script>
 </body>
 </html>
