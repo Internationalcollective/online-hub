@@ -879,6 +879,12 @@ body:has(.ozf.circ) #readbar{background:#1C3E55}
 .glass.circ{--gt-a:rgba(28,62,85,.16);--gt-b:rgba(185,196,203,.45);--gt-base:#EDF4F7;--gt-sh:18,34,45}
 .glass.b-onezerofive .sec-h:not(.sec-plain) h3{font-size:13px}
 @media (max-width:640px){ .glass.b-onezerofive .sec-h:not(.sec-plain) h3{letter-spacing:.3em} .glass.b-onezerofive .sec-h:not(.sec-plain) .count{letter-spacing:.16em} }
+
+/* A little more room between lines (all call sheets) */
+.sheet.ozf .sched tbody td{padding-top:13px;padding-bottom:13px}
+.sheet.ozf .sched tbody td.time{padding-top:14px}
+.sheet.ozf .people tbody td{padding-top:14px;padding-bottom:14px}
+@media (max-width:640px){ .sheet.ozf .people tr{padding:16px 0} .sheet.ozf .people tbody td{padding:0 !important} }
 </style>
 </head>
 <body>
@@ -921,7 +927,7 @@ body:has(.ozf.circ) #readbar{background:#1C3E55}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=67"></script>
-<script src="app.js?v=67"></script>
+<script src="config.js?v=68"></script>
+<script src="app.js?v=68"></script>
 </body>
 </html>
