@@ -807,7 +807,7 @@ body:has(.ozf.circ) #readbar{background:#1C3E55}
 @keyframes g-pop{0%{transform:scale(.6,.9);opacity:.2}60%{transform:scale(1.08,.96)}100%{transform:none;opacity:1}}
 /* Footer links: a glass sheen on hover */
 .glass .links-foot .link-card{transition:background .3s ease, transform .4s var(--g-spring)}
-.glass .links-foot .link-card:hover{background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(226,244,248,.75))}
+.glass .links-foot .link-card:hover{background:linear-gradient(180deg, rgba(255,255,255,.9), var(--g-hover))}
 .glass .links-foot .link-card:active{transform:scale(.985)}
 /* Fallbacks: no backdrop blur, Reduce Transparency, Reduce Motion */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ .glass .g-glass{background:rgba(246,251,252,.97)} }
@@ -927,7 +927,7 @@ body:has(.ozf.circ) #readbar{background:#1C3E55}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=68"></script>
-<script src="app.js?v=68"></script>
+<script src="config.js?v=69"></script>
+<script src="app.js?v=69"></script>
 </body>
 </html>
